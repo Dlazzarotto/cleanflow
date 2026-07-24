@@ -50,6 +50,19 @@ export default function LiveMap() {
         layerRef.current.clearLayers();
         const bounds: [number, number][] = [];
 
+        if (data.base) {
+          bounds.push([data.base.lat, data.base.lng]);
+          const baseIcon = L.divIcon({
+            html: '<div style="font-size:26px;line-height:26px;">🏢</div>',
+            className: '',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+          });
+          L.marker([data.base.lat, data.base.lng], { icon: baseIcon })
+            .bindPopup(`<strong>${data.base.name}</strong><br/>Sede`)
+            .addTo(layerRef.current);
+        }
+
         for (const h of data.houses ?? []) {
           bounds.push([h.lat, h.lng]);
           const icon = L.divIcon({
@@ -117,7 +130,7 @@ export default function LiveMap() {
     <div>
       <div ref={containerRef} className="h-[70vh] w-full rounded-card border border-brand-100" />
       <p className="mt-2 text-sm text-brand-800">
-        🧹 casas de hoje (ícone conforme o status) · círculos coloridos = pessoas da equipe (cor da equipe),
+        🏢 sede da empresa · 🧹 casas de hoje (ícone conforme o status) · círculos coloridos = pessoas da equipe (cor da equipe),
         posição dos últimos 15 minutos, atualizada a cada 60s enquanto elas estão com a Minha agenda aberta.
       </p>
     </div>

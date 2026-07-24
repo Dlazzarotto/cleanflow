@@ -28,7 +28,7 @@ export async function GET() {
   const since = new Date(Date.now() - 15 * 60000).toISOString();
   const { start, end } = etTodayRange();
 
-  const [{ data: pings }, { data: members }, { data: teamMembers }, { data: teams }, { data: bookings }] =
+  const [{ data: pings }, { data: members }, { data: teamMembers }, { data: teams }, { data: bookings }, { data: companyRow }] =
     await Promise.all([
       supabase
         .from('location_pings')
@@ -45,6 +45,7 @@ export async function GET() {
         .gte('scheduled_at', start)
         .lt('scheduled_at', end)
         .neq('status', 'cancelado'),
+      supabase.from('companies').select('name, lat, lng').limit(1).single(),
     ]);
 
   const nameByUser = new Map((members ?? []).map((m: any) => [m.user_id, m.full_name]));
@@ -90,5 +91,10 @@ export async function GET() {
       team_color: b.teams?.color ?? '#8AA6A3',
     }));
 
-  return NextResponse.json({ people, houses });
+  const base =
+    companyRow && (companyRow as any).lat && (companyRow as any).lng
+      ? { name: (companyRow as any).name, lat: (companyRow as any).lat, lng: (companyRow as any).lng }
+      : null;
+
+  return NextResponse.json({ people, houses, base });
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAuth, isManager } from '@/lib/auth';
 import { updateMyNameAction, saveLocaleAction, updateCompanyAction } from '@/lib/actions';
 import PasswordForm from '@/components/PasswordForm';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export default async function ConfiguracoesPage() {
   const [{ data: settings }, { data: company }, { data: authUser }] = await Promise.all([
     supabase.from('user_settings').select('locale').eq('user_id', userId).single(),
     manager
-      ? supabase.from('companies').select('name, phone, email, address').eq('id', companyId).single()
+      ? supabase.from('companies').select('name, phone, email, address, lat, lng').eq('id', companyId).single()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
   ]);
@@ -91,8 +92,12 @@ export default async function ConfiguracoesPage() {
               </div>
             </div>
             <div>
-              <label className="label" htmlFor="company-address">Endereço</label>
-              <input className="input" id="company-address" name="address" defaultValue={(company as any).address ?? ''} />
+              <label className="label" htmlFor="company-address">Endereço da sede</label>
+              <AddressAutocomplete id="company-address" initialValue={(company as any).address ?? ''} />
+              <p className="mt-1 text-sm text-brand-800">
+                Escolha pelo resultado da busca para salvar as coordenadas — usadas nas rotas e no mapa.
+                {(company as any).lat ? ' ✓ Coordenadas da sede salvas.' : ' ⚠️ Sede ainda sem coordenadas.'}
+              </p>
             </div>
             <button className="btn-primary" type="submit">Salvar dados da empresa</button>
           </form>

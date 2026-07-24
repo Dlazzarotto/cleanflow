@@ -14,6 +14,8 @@ export interface PlaceResult {
 }
 
 interface Props {
+  /** Valor inicial no modo nao controlado (ex: endereco ja salvo) */
+  initialValue?: string;
   /** Modo controlado: valor do campo (opcional) */
   value?: string;
   /** Modo controlado: chamado a cada digitacao */
@@ -38,6 +40,7 @@ function extractCity(formatted: string): string {
 }
 
 export default function AddressAutocomplete({
+  initialValue,
   value,
   onValueChange,
   onPlace,
@@ -45,7 +48,7 @@ export default function AddressAutocomplete({
   id = 'address',
   name = 'address',
 }: Props) {
-  const [internal, setInternal] = useState('');
+  const [internal, setInternal] = useState(initialValue ?? '');
   const controlled = value !== undefined;
   const text = controlled ? value : internal;
 
