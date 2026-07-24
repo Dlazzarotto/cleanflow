@@ -269,3 +269,15 @@ export async function setMembershipActiveAction(membershipId: string, active: bo
   if (error) throw new Error(error.message);
   revalidatePath('/equipes');
 }
+
+
+// ---------- STATUS PELA EQUIPE (via funcao segura, sem acesso a valores) ----------
+export async function updateMyBookingStatusAction(id: string, status: string) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase.rpc('set_my_booking_status', {
+    p_booking: id,
+    p_status: status,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/minha-agenda');
+}

@@ -1,11 +1,29 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
-import { updateBookingStatusAction } from '@/lib/actions';
+import { STATUS_LABEL, type BookingStatus } from '@/lib/types';
+import { updateMyBookingStatusAction } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
-const NEXT_STATUS: Partial<Record<BookingStatus, { to: BookingStatus; label: string }>> = {
+interface AgendaItem {
+  id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: BookingStatus;
+  notes: string | null;
+  client_name: string;
+  address: string | null;
+  door_code: string | null;
+  has_pets: boolean;
+  pets_notes: string | null;
+  alarm_notes: string | null;
+  preferences: string | null;
+  products_notes: string | null;
+  team_name: string | null;
+  team_color: string | null;
+}
+
+const NEXT_STATUS: Partial<Record<BookingStatus, { to: string; label: string }>> = {
   agendado: { to: 'a_caminho', label: '🚗 A caminho' },
   a_caminho: { to: 'em_andamento', label: '▶️ Check-in' },
   em_andamento: { to: 'concluido', label: '✅ Check-out' },
@@ -18,31 +36,22 @@ export default async function MinhaAgendaPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Equipes das quais o usuario faz parte
-  const { data: myTeams } = await supabase
-    .from('team_members')
-    .select('team_id')
-    .eq('profile_id', user.id);
-  const teamIds = (myTeams ?? []).map((t) => t.team_id);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 7 * 86400000);
 
-  let bookings: Booking[] = [];
-  if (teamIds.length > 0) {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start.getTime() + 7 * 86400000);
-    const { data } = await supabase
-      .from('bookings')
-      .select('*, clients(full_name, address, door_code, has_pets, pets_notes, alarm_notes, preferences, products_notes), teams(name, color)')
-      .in('team_id', teamIds)
-      .gte('scheduled_at', start.toISOString())
-      .lt('scheduled_at', end.toISOString())
-      .neq('status', 'cancelado')
-      .order('scheduled_at');
-    bookings = (data ?? []) as Booking[];
-  }
+  // Visao segura: apenas limpezas das equipes do usuario, sem valores
+  const { data } = await supabase
+    .from('team_agenda')
+    .select('*')
+    .gte('scheduled_at', start.toISOString())
+    .lt('scheduled_at', end.toISOString())
+    .order('scheduled_at');
 
-  const byDay = new Map<string, Booking[]>();
-  for (const b of bookings) {
+  const items = (data ?? []) as AgendaItem[];
+
+  const byDay = new Map<string, AgendaItem[]>();
+  for (const b of items) {
     const key = new Date(b.scheduled_at).toLocaleDateString('pt-BR', {
       weekday: 'long',
       day: '2-digit',
@@ -57,57 +66,57 @@ export default async function MinhaAgendaPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Minha agenda</h1>
 
-      {teamIds.length === 0 && (
+      {items.length === 0 && (
         <div className="card text-brand-800">
-          Você ainda não foi adicicionado(a) a nenhuma equipe. Fale com o administrador.
+          Nenhuma limpeza nos próximos 7 dias. Se você acabou de receber o acesso,
+          peça ao administrador para colocar você numa equipe.
         </div>
       )}
 
-      {teamIds.length > 0 && bookings.length === 0 && (
-        <div className="card text-brand-800">Nenhuma limpeza nos próximos 7 dias. 🎉</div>
-      )}
-
-      {Array.from(byDay.entries()).map(([day, items]) => (
+      {Array.from(byDay.entries()).map(([day, list]) => (
         <div key={day} className="mb-6">
           <h2 className="mb-2 text-xl font-semibold capitalize text-brand-900">{day}</h2>
           <div className="space-y-3">
-            {items.map((b) => {
-              const c = b.clients as any;
+            {list.map((b) => {
               const next = NEXT_STATUS[b.status];
               return (
-                <div key={b.id} className="card">
+                <div key={b.id} className="card" style={b.team_color ? { borderLeft: `6px solid ${b.team_color}` } : undefined}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xl font-bold">
                       {new Date(b.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{' '}
-                      — {c?.full_name}
+                      — {b.client_name}
                     </p>
                     <span className="rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-900">
                       {STATUS_LABEL[b.status]}
                     </span>
                   </div>
-                  {c?.address && (
+                  <p className="text-sm text-brand-800">
+                    Duração prevista: {Math.floor(b.duration_minutes / 60)}h{b.duration_minutes % 60 > 0 ? ` ${b.duration_minutes % 60}min` : ''}
+                    {b.team_name ? ` · ${b.team_name}` : ''}
+                  </p>
+                  {b.address && (
                     <p className="mt-1">
                       📍{' '}
                       <a
                         className="font-medium text-brand-700 underline"
-                        href={`https://maps.google.com/?q=${encodeURIComponent(c.address)}`}
+                        href={`https://maps.google.com/?q=${encodeURIComponent(b.address)}`}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {c.address}
+                        {b.address}
                       </a>
                     </p>
                   )}
                   <div className="mt-2 space-y-1 text-brand-800">
-                    {c?.door_code && <p>🔑 Código da porta: <strong>{c.door_code}</strong></p>}
-                    {c?.alarm_notes && <p>🚨 Alarme: {c.alarm_notes}</p>}
-                    {c?.has_pets && <p>🐾 Pets: {c.pets_notes ?? 'Sim'}</p>}
-                    {c?.preferences && <p>📝 Preferências: {c.preferences}</p>}
-                    {c?.products_notes && <p>🧴 Produtos: {c.products_notes}</p>}
+                    {b.door_code && <p>🔑 Código da porta: <strong>{b.door_code}</strong></p>}
+                    {b.alarm_notes && <p>🚨 Alarme: {b.alarm_notes}</p>}
+                    {b.has_pets && <p>🐾 Pets: {b.pets_notes ?? 'Sim'}</p>}
+                    {b.preferences && <p>📝 Preferências: {b.preferences}</p>}
+                    {b.products_notes && <p>🧴 Produtos: {b.products_notes}</p>}
                     {b.notes && <p>💬 Observações: {b.notes}</p>}
                   </div>
                   {next && (
-                    <form action={updateBookingStatusAction.bind(null, b.id, next.to)} className="mt-3">
+                    <form action={updateMyBookingStatusAction.bind(null, b.id, next.to)} className="mt-3">
                       <button className="btn-primary w-full" type="submit">{next.label}</button>
                     </form>
                   )}
