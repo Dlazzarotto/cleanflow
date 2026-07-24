@@ -12,10 +12,12 @@ const MANAGER_NAV = [
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/mapa', label: 'Mapa', icon: '🗺️' },
   { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
+  { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];
 
 const CLEANER_NAV = [
   { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
+  { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

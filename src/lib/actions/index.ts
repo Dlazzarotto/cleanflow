@@ -347,3 +347,46 @@ export async function setMemberPositionAction(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath('/equipes');
 }
+
+
+// ---------- CONFIGURACOES ----------
+export async function updateMyNameAction(formData: FormData) {
+  const { supabase, userId, companyId } = await getAuth();
+  const { error } = await supabase
+    .from('memberships')
+    .update({ full_name: String(formData.get('full_name') ?? '').trim() })
+    .eq('user_id', userId)
+    .eq('company_id', companyId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/configuracoes');
+}
+
+export async function saveLocaleAction(formData: FormData) {
+  const { supabase, userId, companyId } = await getAuth();
+  const locale = String(formData.get('locale') ?? 'pt');
+  const { error } = await supabase.from('user_settings').upsert({
+    user_id: userId,
+    active_company_id: companyId,
+    locale,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/configuracoes');
+}
+
+export async function updateCompanyAction(formData: FormData) {
+  const { supabase, companyId, role } = await getAuth();
+  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+    throw new Error('Apenas a gestão pode editar os dados da empresa');
+  }
+  const { error } = await supabase
+    .from('companies')
+    .update({
+      name: String(formData.get('name') ?? '').trim(),
+      phone: String(formData.get('phone') ?? '') || null,
+      email: String(formData.get('email') ?? '') || null,
+      address: String(formData.get('address') ?? '') || null,
+    })
+    .eq('id', companyId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/configuracoes');
+}
