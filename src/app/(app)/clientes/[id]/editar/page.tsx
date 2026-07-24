@@ -36,6 +36,10 @@ export default async function EditarClientePage({ params }: { params: { id: stri
             Para atualizar as coordenadas de rota, cadastre o endereço novo pela busca (em breve aqui também).
           </p>
         </div>
+        <div>
+          <label className="label" htmlFor="unit">Unidade / apartamento (se prédio)</label>
+          <input className="input" id="unit" name="unit" defaultValue={c.unit ?? ''} placeholder="Ex: Apt 3B" />
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="label" htmlFor="door_code">Código da porta</label>

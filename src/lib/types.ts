@@ -30,6 +30,7 @@ export interface Client {
   phone: string | null;
   email: string | null;
   address: string | null;
+  unit: string | null;
   lat: number | null;
   lng: number | null;
   door_code: string | null;

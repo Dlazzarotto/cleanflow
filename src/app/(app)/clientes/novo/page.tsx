@@ -24,6 +24,10 @@ export default function NovoClientePage() {
           <label className="label" htmlFor="address">Endereço</label>
           <AddressAutocomplete />
         </div>
+        <div>
+          <label className="label" htmlFor="unit">Unidade / apartamento (se prédio)</label>
+          <input className="input" id="unit" name="unit" placeholder="Ex: Apt 3B" />
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="label" htmlFor="door_code">Código da porta</label>

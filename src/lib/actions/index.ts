@@ -19,6 +19,7 @@ export async function createClientAction(formData: FormData) {
     phone: String(formData.get('phone') ?? '') || null,
     email: String(formData.get('email') ?? '') || null,
     address: String(formData.get('address') ?? '') || null,
+    unit: String(formData.get('unit') ?? '') || null,
     lat: formData.get('lat') ? Number(formData.get('lat')) : null,
     lng: formData.get('lng') ? Number(formData.get('lng')) : null,
     door_code: String(formData.get('door_code') ?? '') || null,
@@ -204,6 +205,7 @@ export async function updateClientAction(id: string, formData: FormData) {
       phone: String(formData.get('phone') ?? '') || null,
       email: String(formData.get('email') ?? '') || null,
       address: String(formData.get('address') ?? '') || null,
+      unit: String(formData.get('unit') ?? '') || null,
       lat: formData.get('lat') ? Number(formData.get('lat')) : undefined,
       lng: formData.get('lng') ? Number(formData.get('lng')) : undefined,
       door_code: String(formData.get('door_code') ?? '') || null,
@@ -272,11 +274,18 @@ export async function setMembershipActiveAction(membershipId: string, active: bo
 
 
 // ---------- STATUS PELA EQUIPE (via funcao segura, sem acesso a valores) ----------
-export async function updateMyBookingStatusAction(id: string, status: string) {
+export async function updateMyBookingStatusAction(
+  id: string,
+  status: string,
+  lat?: number | null,
+  lng?: number | null
+) {
   const { supabase } = await getCompanyId();
   const { error } = await supabase.rpc('set_my_booking_status', {
     p_booking: id,
     p_status: status,
+    p_lat: lat ?? null,
+    p_lng: lng ?? null,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/minha-agenda');

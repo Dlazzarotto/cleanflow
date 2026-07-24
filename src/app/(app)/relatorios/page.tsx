@@ -132,6 +132,11 @@ export default async function RelatoriosPage({
       const gapMin =
         (new Date(curr.checkin_at!).getTime() - new Date(prev.checkout_at!).getTime()) / 60000;
       if (gapMin <= 0 || gapMin > 180) continue; // pausas longas nao contam
+      // Mesmo predio/endereco (varias unidades): trajeto zero, nao conta
+      if (
+        prev.clients?.lat && prev.clients?.lng && curr.clients?.lat && curr.clients?.lng &&
+        haversineMiles(prev.clients.lat, prev.clients.lng, curr.clients.lat, curr.clients.lng) < 0.05
+      ) continue;
       const s = stats.get(curr.team_id!);
       if (!s) continue;
       s.travelMinutes += gapMin;

@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { STATUS_LABEL, type BookingStatus } from '@/lib/types';
-import { updateMyBookingStatusAction } from '@/lib/actions';
+import CheckinButton from '@/components/CheckinButton';
+import ArrivalWatcher from '@/components/ArrivalWatcher';
+import LocationReporter from '@/components/LocationReporter';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,9 @@ interface AgendaItem {
   products_notes: string | null;
   team_name: string | null;
   team_color: string | null;
+  lat: number | null;
+  lng: number | null;
+  unit: string | null;
 }
 
 const NEXT_STATUS: Partial<Record<BookingStatus, { to: string; label: string }>> = {
@@ -62,8 +67,14 @@ export default async function MinhaAgendaPage() {
     byDay.set(key, arr);
   }
 
+  const arrivalTargets = items
+    .filter((b) => b.lat && b.lng && (b.status === 'agendado' || b.status === 'a_caminho'))
+    .map((b) => ({ id: b.id, name: b.client_name, lat: b.lat!, lng: b.lng!, status: b.status }));
+
   return (
     <div className="mx-auto max-w-2xl">
+      <LocationReporter />
+      <ArrivalWatcher targets={arrivalTargets} />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Minha agenda</h1>
 
       {items.length === 0 && (
@@ -85,6 +96,7 @@ export default async function MinhaAgendaPage() {
                     <p className="text-xl font-bold">
                       {new Date(b.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{' '}
                       — {b.client_name}
+                      {b.unit && <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-base font-semibold text-brand-900">🚪 {b.unit}</span>}
                     </p>
                     <span className="rounded-full bg-brand-100 px-3 py-1 text-sm font-medium text-brand-900">
                       {STATUS_LABEL[b.status]}
@@ -116,9 +128,9 @@ export default async function MinhaAgendaPage() {
                     {b.notes && <p>💬 Observações: {b.notes}</p>}
                   </div>
                   {next && (
-                    <form action={updateMyBookingStatusAction.bind(null, b.id, next.to)} className="mt-3">
-                      <button className="btn-primary w-full" type="submit">{next.label}</button>
-                    </form>
+                    <div className="mt-3">
+                      <CheckinButton bookingId={b.id} to={next.to} label={next.label} />
+                    </div>
                   )}
                 </div>
               );
