@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import BookingForm from '@/components/BookingForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovoAgendamentoPage() {
+  await requireManager();
   const supabase = createClient();
   const [{ data: clients }, { data: teams }] = await Promise.all([
     supabase.from('clients').select('id, full_name').eq('status', 'ativo').order('full_name'),

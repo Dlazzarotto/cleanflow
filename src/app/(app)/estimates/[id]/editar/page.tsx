@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import EstimateForm, { type EstimateInitial } from '@/components/EstimateForm';
 import { getPricingSettings } from '@/lib/actions/estimates';
@@ -6,6 +7,7 @@ import { getPricingSettings } from '@/lib/actions/estimates';
 export const dynamic = 'force-dynamic';
 
 export default async function EditarEstimatePage({ params }: { params: { id: string } }) {
+  await requireManager();
   const supabase = createClient();
   const [{ data: estimate }, { data: clients }, settings] = await Promise.all([
     supabase.from('estimates').select('*').eq('id', params.id).single(),

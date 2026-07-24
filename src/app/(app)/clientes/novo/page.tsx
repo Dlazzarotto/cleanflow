@@ -1,7 +1,9 @@
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { requireManager } from '@/lib/auth';
 import { createClientAction } from '@/lib/actions';
 
-export default function NovoClientePage() {
+export default async function NovoClientePage() {
+  await requireManager();
   return (
     <div className="max-w-2xl">
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Novo cliente</h1>

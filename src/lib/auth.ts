@@ -41,3 +41,11 @@ export async function getAuth(): Promise<AuthContext> {
 export function isManager(role: string) {
   return role === 'owner' || role === 'admin' || role === 'supervisor';
 }
+
+
+/** Garante papel de gestao; equipe e redirecionada para a Minha agenda. */
+export async function requireManager(): Promise<AuthContext> {
+  const ctx = await getAuth();
+  if (!isManager(ctx.role)) redirect('/minha-agenda');
+  return ctx;
+}

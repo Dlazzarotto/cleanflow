@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatMinutes } from '@/lib/pricing';
 import EmailButton from '@/components/EmailButton';
@@ -24,6 +25,7 @@ function usd(n: number) {
 }
 
 export default async function EstimatesPage() {
+  await requireManager();
   const supabase = createClient();
   const [{ data: estimates }, settings] = await Promise.all([
     supabase

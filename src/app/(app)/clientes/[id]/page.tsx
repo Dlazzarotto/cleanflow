@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireManager } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, type Booking, type Client } from '@/lib/types';
@@ -6,6 +7,7 @@ import { STATUS_LABEL, type Booking, type Client } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
+  await requireManager();
   const supabase = createClient();
   const [{ data: client }, { data: bookings }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', params.id).single(),

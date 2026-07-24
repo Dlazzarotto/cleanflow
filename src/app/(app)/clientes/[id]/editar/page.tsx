@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { updateClientAction } from '@/lib/actions';
 import type { Client } from '@/lib/types';
@@ -6,6 +7,7 @@ import type { Client } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function EditarClientePage({ params }: { params: { id: string } }) {
+  await requireManager();
   const supabase = createClient();
   const { data } = await supabase.from('clients').select('*').eq('id', params.id).single();
   if (!data) notFound();

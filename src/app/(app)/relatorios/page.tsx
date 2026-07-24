@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { COMPANY_TZ } from '@/lib/tz';
 
@@ -70,6 +71,7 @@ export default async function RelatoriosPage({
 }: {
   searchParams: { dias?: string };
 }) {
+  await requireManager();
   const dias = [30, 90, 180].includes(Number(searchParams.dias)) ? Number(searchParams.dias) : 30;
   const since = new Date(Date.now() - dias * 86400000);
 

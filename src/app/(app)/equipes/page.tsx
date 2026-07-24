@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import {
   createTeamAction,
   updateTeamAction,
@@ -19,6 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default async function EquipesPage() {
+  await requireManager();
   const supabase = createClient();
   const { data: companyId } = await supabase.rpc('current_company_id');
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import { etTodayRange, etMonthStart } from '@/lib/tz';
 import { STATUS_LABEL, type Booking } from '@/lib/types';
 import Link from 'next/link';
@@ -6,6 +7,7 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
+  await requireManager();
   const supabase = createClient();
   const { start: startOfDay, end: endOfDay } = etTodayRange();
   const startOfMonth = etMonthStart();

@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import Calendar from '@/components/Calendar';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CalendarioPage() {
+  await requireManager();
   const supabase = createClient();
   const { data: teams } = await supabase
     .from('teams')

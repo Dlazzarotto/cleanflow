@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import EstimateForm from '@/components/EstimateForm';
 import { getPricingSettings } from '@/lib/actions/estimates';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovoEstimatePage() {
+  await requireManager();
   const supabase = createClient();
   const [{ data: clients }, settings] = await Promise.all([
     supabase

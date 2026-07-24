@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import type { Client } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClientesPage() {
+  await requireManager();
   const supabase = createClient();
   const { data } = await supabase
     .from('clients')

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatMinutes, FREQUENCY_LABEL } from '@/lib/pricing';
 import { buildServiceList } from '@/lib/estimate-view';
@@ -11,6 +12,7 @@ function usd(n: number) {
 }
 
 export default async function EstimateDocumentoPage({ params }: { params: { id: string } }) {
+  await requireManager();
   const supabase = createClient();
   const [{ data: estimate }, { data: company }] = await Promise.all([
     supabase.from('estimates').select('*, clients(full_name, phone, email, address)').eq('id', params.id).single(),
