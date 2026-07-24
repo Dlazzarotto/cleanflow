@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { requireManager } from '@/lib/auth';
 import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
 import { updateBookingStatusAction } from '@/lib/actions';
 
@@ -11,27 +12,76 @@ const NEXT_STATUS: Partial<Record<BookingStatus, { to: BookingStatus; label: str
   em_andamento: { to: 'concluido', label: 'Check-out' },
 };
 
+interface Item {
+  booking: Booking;
+  seriesCount: number; // quantas ocorrencias futuras a serie tem (1 = avulsa)
+}
+
 export default async function AgendamentosPage() {
+  await requireManager();
   const supabase = createClient();
+
+  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const to = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Janela operacional: proximos 14 dias
   const { data } = await supabase
     .from('bookings')
     .select('*, clients(full_name, address), teams(name, color)')
-    .gte('scheduled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .gte('scheduled_at', from)
+    .lte('scheduled_at', to)
     .order('scheduled_at');
-  const bookings = (data ?? []) as Booking[];
+  const inWindow = (data ?? []) as Booking[];
+
+  // Contagem futura de cada serie (para a etiqueta 🔁)
+  const seriesIds = Array.from(
+    new Set(inWindow.map((b) => b.series_id).filter(Boolean))
+  ) as string[];
+
+  const seriesCounts = new Map<string, number>();
+  if (seriesIds.length > 0) {
+    const { data: futureSeries } = await supabase
+      .from('bookings')
+      .select('series_id')
+      .in('series_id', seriesIds)
+      .gte('scheduled_at', from)
+      .neq('status', 'cancelado');
+    for (const row of futureSeries ?? []) {
+      const id = (row as any).series_id as string;
+      seriesCounts.set(id, (seriesCounts.get(id) ?? 0) + 1);
+    }
+  }
+
+  // Agrupa: de cada serie, apenas a PROXIMA ocorrencia aparece aqui
+  const seenSeries = new Set<string>();
+  const items: Item[] = [];
+  for (const b of inWindow) {
+    if (b.series_id) {
+      if (seenSeries.has(b.series_id)) continue;
+      seenSeries.add(b.series_id);
+      items.push({ booking: b, seriesCount: seriesCounts.get(b.series_id) ?? 1 });
+    } else {
+      items.push({ booking: b, seriesCount: 1 });
+    }
+  }
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Agendamentos</h1>
         <Link href="/agendamentos/novo" className="btn-primary">+ Nova limpeza</Link>
       </div>
+      <p className="mb-6 text-brand-800">
+        Visão operacional dos próximos 14 dias. Séries recorrentes aparecem uma vez (a próxima limpeza);
+        para ver e editar todas as datas, use o{' '}
+        <Link href="/calendario" className="font-semibold text-brand-700 underline">Calendário</Link>.
+      </p>
 
-      {bookings.length === 0 ? (
-        <div className="card text-brand-800">Nenhuma limpeza agendada a partir de hoje.</div>
+      {items.length === 0 ? (
+        <div className="card text-brand-800">Nenhuma limpeza nos próximos 14 dias.</div>
       ) : (
         <div className="space-y-3">
-          {bookings.map((b) => {
+          {items.map(({ booking: b, seriesCount }) => {
             const next = NEXT_STATUS[b.status];
             return (
               <div key={b.id} className="card flex flex-wrap items-center justify-between gap-3">
@@ -43,6 +93,11 @@ export default async function AgendamentosPage() {
                   </p>
                   <p className="text-brand-800">{b.clients?.address}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {b.series_id && (
+                      <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800">
+                        🔁 recorrente · {seriesCount} limpeza{seriesCount === 1 ? '' : 's'} à frente
+                      </span>
+                    )}
                     {b.teams && (
                       <span className="rounded-full px-3 py-1 text-sm font-medium text-white" style={{ backgroundColor: b.teams.color }}>
                         {b.teams.name}
