@@ -30,6 +30,8 @@ export interface Client {
   phone: string | null;
   email: string | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   door_code: string | null;
   has_pets: boolean;
   pets_notes: string | null;
@@ -63,13 +65,25 @@ export interface Booking {
   client_id: string;
   team_id: string | null;
   service_id: string | null;
+  series_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
   price: number;
   status: BookingStatus;
   notes: string | null;
-  clients?: Pick<Client, 'full_name' | 'address'> | null;
+  clients?: Pick<Client, 'full_name' | 'address' | 'lat' | 'lng'> | null;
   teams?: Pick<Team, 'name' | 'color'> | null;
+}
+
+export interface Suggestion {
+  date: string;          // YYYY-MM-DD
+  team_id: string;
+  team_name: string;
+  team_color: string;
+  distance_mi: number;
+  nearest_client: string;
+  suggested_time: string; // HH:MM
+  bookings_that_day: number;
 }
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {

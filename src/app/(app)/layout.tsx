@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/agendamentos', label: 'Agendamentos', icon: '🗓️' },
+  { href: '/calendario', label: 'Calendário', icon: '🗓️' },
+  { href: '/estimates', label: 'Estimates', icon: '🧮' },
+  { href: '/agendamentos', label: 'Agendamentos', icon: '📋' },
   { href: '/clientes', label: 'Clientes', icon: '👤' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
 ];
@@ -28,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Sidebar (desktop) / topo (mobile) */}
-      <aside className="bg-brand-900 text-white md:w-64 md:shrink-0">
+      <aside className="bg-brand-900 text-white md:w-64 md:shrink-0 print:hidden">
         <div className="p-5">
           <p className="text-2xl font-bold">
             Clean<span className="text-aqua-400">Flow</span>
@@ -53,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </button>
         </form>
       </aside>
-      <main className="flex-1 p-5 md:p-8">{children}</main>
+      <main className="flex-1 p-5 md:p-8 print:p-0">{children}</main>
     </div>
   );
 }

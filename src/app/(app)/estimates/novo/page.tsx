@@ -1,0 +1,33 @@
+import { createClient } from '@/lib/supabase/server';
+import EstimateForm from '@/components/EstimateForm';
+import { getPricingSettings } from '@/lib/actions/estimates';
+
+export const dynamic = 'force-dynamic';
+
+export default async function NovoEstimatePage() {
+  const supabase = createClient();
+  const [{ data: clients }, settings] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, full_name, address, lat, lng')
+      .eq('status', 'ativo')
+      .order('full_name'),
+    getPricingSettings(),
+  ]);
+
+  return (
+    <div>
+      <h1 className="mb-6 text-3xl font-bold text-brand-900">Novo estimate</h1>
+      <EstimateForm
+        clients={(clients ?? []).map((c) => ({
+          id: c.id,
+          name: c.full_name,
+          address: c.address,
+          lat: c.lat,
+          lng: c.lng,
+        }))}
+        settings={settings}
+      />
+    </div>
+  );
+}

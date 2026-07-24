@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 
 async function getCompanyId() {
   const supabase = createClient();
@@ -56,23 +57,43 @@ export async function createTeamAction(formData: FormData) {
 }
 
 // ---------- AGENDAMENTOS ----------
+
+/**
+ * Cria uma limpeza. Se "repeat" for semanal/quinzenal/mensal,
+ * cria a série completa com o mesmo series_id.
+ */
 export async function createBookingAction(formData: FormData) {
   const { supabase, companyId } = await getCompanyId();
   const date = String(formData.get('date') ?? '');
   const time = String(formData.get('time') ?? '');
-  const { error } = await supabase.from('bookings').insert({
+  const repeat = String(formData.get('repeat') ?? 'nao');
+  const occurrences = Math.min(Math.max(Number(formData.get('occurrences') ?? 1), 1), 52);
+
+  const base = {
     company_id: companyId,
     client_id: String(formData.get('client_id')),
     team_id: String(formData.get('team_id') ?? '') || null,
-    scheduled_at: new Date(`${date}T${time}`).toISOString(),
     duration_minutes: Number(formData.get('duration_minutes') ?? 120),
     price: Number(formData.get('price') ?? 0),
     notes: String(formData.get('notes') ?? '') || null,
     status: 'agendado',
-  });
+  };
+
+  const stepDays = repeat === 'semanal' ? 7 : repeat === 'quinzenal' ? 14 : repeat === 'mensal' ? 28 : 0;
+  const total = stepDays > 0 ? occurrences : 1;
+  const seriesId = stepDays > 0 ? crypto.randomUUID() : null;
+
+  const rows = Array.from({ length: total }, (_, i) => ({
+    ...base,
+    scheduled_at: etToUtcIso(addDaysYmd(date, i * stepDays), time),
+    series_id: seriesId,
+  }));
+
+  const { error } = await supabase.from('bookings').insert(rows);
   if (error) throw new Error(error.message);
   revalidatePath('/agendamentos');
-  redirect('/agendamentos');
+  revalidatePath('/calendario');
+  redirect('/calendario');
 }
 
 export async function updateBookingStatusAction(id: string, status: string) {
@@ -83,5 +104,101 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const { error } = await supabase.from('bookings').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/agendamentos');
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Edita uma limpeza a partir do calendário.
+ * scope = 'one': só esta ocorrência.
+ * scope = 'series': esta e as próximas da mesma série
+ * (a mudança de data/hora desloca as futuras pelo mesmo intervalo).
+ */
+export async function updateBookingAction(input: {
+  id: string;
+  scope: 'one' | 'series';
+  date: string;       // YYYY-MM-DD
+  time: string;       // HH:MM
+  duration_minutes: number;
+  price: number;
+  team_id: string | null;
+  status: string;
+}) {
+  const { supabase } = await getCompanyId();
+
+  const { data: current, error: fetchError } = await supabase
+    .from('bookings')
+    .select('id, series_id, scheduled_at')
+    .eq('id', input.id)
+    .single();
+  if (fetchError || !current) throw new Error('Limpeza não encontrada');
+
+  const newStart = new Date(etToUtcIso(input.date, input.time));
+  const patchCommon = {
+    duration_minutes: input.duration_minutes,
+    price: input.price,
+    team_id: input.team_id,
+    status: input.status,
+  };
+
+  if (input.scope === 'series' && current.series_id) {
+    const deltaMs = newStart.getTime() - new Date(current.scheduled_at).getTime();
+    const { data: futureOnes, error: listError } = await supabase
+      .from('bookings')
+      .select('id, scheduled_at')
+      .eq('series_id', current.series_id)
+      .gte('scheduled_at', current.scheduled_at);
+    if (listError) throw new Error(listError.message);
+
+    for (const b of futureOnes ?? []) {
+      const shifted = new Date(new Date(b.scheduled_at).getTime() + deltaMs);
+      const { error } = await supabase
+        .from('bookings')
+        .update({ ...patchCommon, scheduled_at: shifted.toISOString() })
+        .eq('id', b.id);
+      if (error) throw new Error(error.message);
+    }
+  } else {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ ...patchCommon, scheduled_at: newStart.toISOString() })
+      .eq('id', input.id);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath('/agendamentos');
+  revalidatePath('/calendario');
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Cancela uma limpeza (ou esta e as próximas da série).
+ */
+export async function cancelBookingAction(input: { id: string; scope: 'one' | 'series' }) {
+  const { supabase } = await getCompanyId();
+
+  const { data: current, error: fetchError } = await supabase
+    .from('bookings')
+    .select('id, series_id, scheduled_at')
+    .eq('id', input.id)
+    .single();
+  if (fetchError || !current) throw new Error('Limpeza não encontrada');
+
+  if (input.scope === 'series' && current.series_id) {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelado' })
+      .eq('series_id', current.series_id)
+      .gte('scheduled_at', current.scheduled_at);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelado' })
+      .eq('id', input.id);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath('/agendamentos');
+  revalidatePath('/calendario');
   revalidatePath('/dashboard');
 }

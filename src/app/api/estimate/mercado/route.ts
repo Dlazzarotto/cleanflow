@@ -1,0 +1,76 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+
+/**
+ * POST /api/estimate/mercado  { city: string }
+ * Usa a Anthropic API com busca na web para levantar os precos
+ * de limpeza residencial praticados na regiao informada.
+ */
+export async function POST(request: Request) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'ANTHROPIC_API_KEY não configurada — a pesquisa de mercado fica indisponível.' },
+      { status: 500 }
+    );
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+
+  let body: { city?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+  }
+  const city = (body.city ?? '').trim();
+  if (!city) return NextResponse.json({ error: 'Informe a cidade' }, { status: 400 });
+
+  const prompt = `Pesquise na web os preços atuais de limpeza residencial (house cleaning) na região de ${city}, Estados Unidos.
+Quero: faixa de preço por hora (por profissional) e faixa de preço por visita para uma casa média de 3 quartos e 2 banheiros, tanto limpeza de manutenção quanto deep cleaning.
+Responda SOMENTE com um objeto JSON válido, sem markdown e sem texto antes ou depois, no formato:
+{"hourly_low": number, "hourly_high": number, "visit_low": number, "visit_high": number, "deep_low": number, "deep_high": number, "resumo": "2 a 3 frases em português resumindo o mercado local e as fontes"}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      return NextResponse.json({ error: 'Falha na pesquisa de mercado.', detail }, { status: 502 });
+    }
+
+    const data = await res.json();
+    const text: string = (data.content ?? [])
+      .filter((c: { type: string }) => c.type === 'text')
+      .map((c: { text: string }) => c.text)
+      .join('\n');
+
+    const clean = text.replace(/```json|```/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return NextResponse.json({ error: 'Não foi possível interpretar a pesquisa.', raw: text }, { status: 502 });
+    }
+
+    const market = JSON.parse(jsonMatch[0]);
+    return NextResponse.json({ market });
+  } catch {
+    return NextResponse.json({ error: 'Erro na pesquisa de mercado.' }, { status: 502 });
+  }
+}

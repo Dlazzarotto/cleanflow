@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { etTodayRange, etMonthStart } from '@/lib/tz';
 import { STATUS_LABEL, type Booking } from '@/lib/types';
 import Link from 'next/link';
 
@@ -6,17 +7,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const supabase = createClient();
-  const today = new Date();
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const { start: startOfDay, end: endOfDay } = etTodayRange();
+  const startOfMonth = etMonthStart();
 
   const [todayRes, monthRes, clientsRes] = await Promise.all([
     supabase
       .from('bookings')
       .select('*, clients(full_name, address), teams(name, color)')
       .gte('scheduled_at', startOfDay)
-      .lte('scheduled_at', endOfDay)
+      .lt('scheduled_at', endOfDay)
       .order('scheduled_at'),
     supabase
       .from('bookings')
