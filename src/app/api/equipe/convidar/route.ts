@@ -73,17 +73,41 @@ export async function POST(request: Request) {
     (body as any)._password = password;
   }
 
-  // 2) Cria/reativa o vinculo com ESTA empresa
-  const { error: memberError } = await admin.from('memberships').upsert(
-    {
+  // 2) Cria ou reativa o vinculo com ESTA empresa.
+  // Protecoes: convite NUNCA rebaixa um owner nem sobrescreve o nome
+  // de quem ja existe — apenas cria ou reativa.
+  const { data: existing } = await admin
+    .from('memberships')
+    .select('id, role, full_name, active')
+    .eq('user_id', userId)
+    .eq('company_id', auth.companyId)
+    .single();
+
+  let memberError = null as { message: string } | null;
+  let alreadyLinked = false;
+
+  if (existing) {
+    alreadyLinked = true;
+    const keepOwner = existing.role === 'owner';
+    const { error } = await admin
+      .from('memberships')
+      .update({
+        active: true,
+        role: keepOwner ? 'owner' : role,
+      })
+      .eq('id', existing.id);
+    memberError = error;
+  } else {
+    const { error } = await admin.from('memberships').insert({
       user_id: userId,
       company_id: auth.companyId,
       role,
       full_name: fullName,
       active: true,
-    },
-    { onConflict: 'user_id,company_id' }
-  );
+    });
+    memberError = error;
+  }
+
   if (memberError) {
     return NextResponse.json({ error: `Falha no vínculo: ${memberError.message}` }, { status: 502 });
   }
@@ -116,6 +140,8 @@ export async function POST(request: Request) {
     temp_password: createdNew ? (body as any)._password : null,
     message: createdNew
       ? 'Acesso criado. Anote a senha temporária e entregue à pessoa.'
-      : 'Esta pessoa já tinha login (de outra empresa ou anterior) — o vínculo com a sua empresa foi criado com o mesmo email e senha que ela já usa.',
+      : alreadyLinked
+        ? 'Esta pessoa já tinha vínculo com a sua empresa — o acesso foi reativado sem alterar o nome nem rebaixar o papel.'
+        : 'Esta pessoa já tinha login (de outra empresa) — o vínculo com a sua empresa foi criado com o mesmo email e senha que ela já usa.',
   });
 }
