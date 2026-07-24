@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { formatMinutes } from '@/lib/pricing';
 import { buildServiceList } from '@/lib/estimate-view';
 import { EMAIL_I18N, FREQ, normalizeLang } from '@/lib/i18n/documents';
 
@@ -94,7 +93,6 @@ export async function POST(request: Request) {
       ${servicesHtml}
       <div style="background:#EFFAF9;border-radius:12px;padding:16px;margin:20px 0;">
         <p style="margin:0;"><strong>${t.frequency}:</strong> ${FREQ[lang][e.frequency] ?? FREQ[lang].indef}</p>
-        <p style="margin:4px 0 0;"><strong>${t.time}:</strong> ${formatMinutes(e.minutes)}</p>
         <p style="margin:12px 0 0;font-size:22px;font-weight:bold;color:#083A38;">${t.investment}: ${price}</p>
       </div>
       <p style="font-size:14px;color:#0C4B48;">${t.validity(validade)}</p>

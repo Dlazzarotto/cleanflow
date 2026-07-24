@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
-import { formatMinutes } from '@/lib/pricing';
 import { buildServiceList } from '@/lib/estimate-view';
 import { ESTIMATE_I18N, FREQ, normalizeLang } from '@/lib/i18n/documents';
 import PrintButton from '@/components/PrintButton';
@@ -81,10 +80,6 @@ export default async function EstimateDocumentoPage({ params }: { params: { id: 
             <div>
               <p className="text-brand-800">{t.frequency}</p>
               <p className="font-semibold">{FREQ[lang][e.frequency] ?? FREQ[lang].indef}</p>
-            </div>
-            <div>
-              <p className="text-brand-800">{t.timePerVisit}</p>
-              <p className="font-semibold">{formatMinutes(e.minutes)}</p>
             </div>
             <div className="text-right">
               <p className="text-brand-800">{t.investment}</p>
