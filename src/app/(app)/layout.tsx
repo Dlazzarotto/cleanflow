@@ -9,6 +9,7 @@ const MANAGER_NAV = [
   { href: '/agendamentos', label: 'Agendamentos', icon: '📋' },
   { href: '/clientes', label: 'Clientes', icon: '👤' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
+  { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
 ];
 
