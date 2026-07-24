@@ -28,6 +28,8 @@ export async function createClientAction(formData: FormData) {
     phone: String(formData.get('phone') ?? '') || null,
     email: String(formData.get('email') ?? '') || null,
     address: String(formData.get('address') ?? '') || null,
+    lat: formData.get('lat') ? Number(formData.get('lat')) : null,
+    lng: formData.get('lng') ? Number(formData.get('lng')) : null,
     door_code: String(formData.get('door_code') ?? '') || null,
     has_pets: formData.get('has_pets') === 'on',
     pets_notes: String(formData.get('pets_notes') ?? '') || null,
