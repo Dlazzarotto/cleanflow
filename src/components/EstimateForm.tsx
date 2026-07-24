@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveEstimateAction } from '@/lib/actions/estimates';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 import {
   BEDROOM_TASKS,
   BATHROOM_TASKS,
@@ -106,6 +107,7 @@ export default function EstimateForm({
   const [clientId, setClientId] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
 
   const [bedrooms, setBedrooms] = useState(3);
   const [fullBaths, setFullBaths] = useState(2);
@@ -177,6 +179,7 @@ export default function EstimateForm({
       const parts = c.address.split(',').map((p) => p.trim());
       if (parts.length >= 2) setCity(parts[1]);
     }
+    setCoords({ lat: c?.lat ?? null, lng: c?.lng ?? null });
   }
 
   async function searchMarket() {
@@ -213,8 +216,8 @@ export default function EstimateForm({
         address: address || null,
         city: city || null,
         frequency,
-        lat: c?.lat ?? null,
-        lng: c?.lng ?? null,
+        lat: coords.lat ?? c?.lat ?? null,
+        lng: coords.lng ?? c?.lng ?? null,
         input,
         market_notes: market
           ? `Mercado em ${city}: ${usd(market.visit_low)}–${usd(market.visit_high)}/visita, ${usd(market.hourly_low)}–${usd(market.hourly_high)}/h. ${market.resumo}`
@@ -246,7 +249,17 @@ export default function EstimateForm({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="label" htmlFor="est-address">Endereço</label>
-              <input className="input" id="est-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+              <AddressAutocomplete
+                id="est-address"
+                withHiddenFields={false}
+                value={address}
+                onValueChange={setAddress}
+                onPlace={(p) => {
+                  setAddress(p.address);
+                  if (p.city) setCity(p.city);
+                  setCoords({ lat: p.lat, lng: p.lng });
+                }}
+              />
             </div>
             <div>
               <label className="label" htmlFor="est-city">Cidade (para pesquisa de mercado)</label>
