@@ -58,6 +58,15 @@ export default async function EditarClientePage({ params }: { params: { id: stri
             </select>
           </div>
         </div>
+        <div>
+          <label className="label" htmlFor="language">Idioma do cliente (documentos e email)</label>
+          <select className="input" id="language" name="language" defaultValue={(c as any).language ?? 'pt'}>
+            <option value="pt">🇧🇷 Português</option>
+            <option value="en">🇺🇸 English</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="fr">🇫🇷 Français</option>
+          </select>
+        </div>
         <div className="flex items-center gap-3">
           <input type="checkbox" id="has_pets" name="has_pets" className="h-6 w-6 accent-brand-700" defaultChecked={c.has_pets} />
           <label htmlFor="has_pets" className="font-medium text-brand-800">Tem pets</label>

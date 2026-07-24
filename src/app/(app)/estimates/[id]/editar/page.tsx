@@ -13,7 +13,7 @@ export default async function EditarEstimatePage({ params }: { params: { id: str
     supabase.from('estimates').select('*').eq('id', params.id).single(),
     supabase
       .from('clients')
-      .select('id, full_name, address, lat, lng')
+      .select('id, full_name, address, lat, lng, language')
       .eq('status', 'ativo')
       .order('full_name'),
     getPricingSettings(),
@@ -32,6 +32,7 @@ export default async function EditarEstimatePage({ params }: { params: { id: str
     lat: e.lat,
     lng: e.lng,
     frequency: e.frequency,
+    language: e.language,
     bedrooms: e.bedrooms,
     full_baths: e.full_baths,
     half_baths: e.half_baths,
@@ -53,6 +54,7 @@ export default async function EditarEstimatePage({ params }: { params: { id: str
           address: c.address,
           lat: c.lat,
           lng: c.lng,
+          language: (c as any).language,
         }))}
         settings={settings}
         initial={initial}

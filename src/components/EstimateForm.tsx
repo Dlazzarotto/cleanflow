@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveEstimateAction, updateEstimateAction } from '@/lib/actions/estimates';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { DOC_LANGS } from '@/lib/i18n/documents';
 import {
   BEDROOM_TASKS,
   BATHROOM_TASKS,
@@ -19,6 +20,7 @@ interface Option {
   address: string | null;
   lat: number | null;
   lng: number | null;
+  language?: string | null;
 }
 
 interface Market {
@@ -107,6 +109,7 @@ export interface EstimateInitial {
   lat: number | null;
   lng: number | null;
   frequency: string | null;
+  language?: string | null;
   bedrooms: number;
   full_baths: number;
   half_baths: number;
@@ -155,6 +158,7 @@ export default function EstimateForm({
     }
   );
   const [frequency, setFrequency] = useState(initial?.frequency ?? 'quinzenal');
+  const [language, setLanguage] = useState((initial as any)?.language ?? 'pt');
   const [laundry, setLaundry] = useState(initial?.laundry ?? false);
   const [laundryLoads, setLaundryLoads] = useState(initial?.laundry_loads ?? 1);
   const [deepClean, setDeepClean] = useState(initial?.deep_clean ?? false);
@@ -213,6 +217,7 @@ export default function EstimateForm({
       if (parts.length >= 2) setCity(parts[1]);
     }
     setCoords({ lat: c?.lat ?? null, lng: c?.lng ?? null });
+    if (c?.language) setLanguage(c.language);
   }
 
   // Dispara a pesquisa sozinha quando a cidade e definida (com debounce)
@@ -265,6 +270,7 @@ export default function EstimateForm({
         address: address || null,
         city: city || null,
         frequency,
+        language,
         lat: coords.lat ?? c?.lat ?? null,
         lng: coords.lng ?? c?.lng ?? null,
         input,
@@ -339,6 +345,15 @@ export default function EstimateForm({
               <input className="input" id="est-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex: Malden, MA" />
             </div>
           </div>
+          <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="est-language">Idioma do cliente (documentos e email)</label>
+            <select className="input" id="est-language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+              {DOC_LANGS.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="label" htmlFor="est-frequency">Frequência desejada</label>
             <select className="input" id="est-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
@@ -347,6 +362,7 @@ export default function EstimateForm({
               <option value="quinzenal">Quinzenal</option>
               <option value="mensal">Mensal</option>
             </select>
+          </div>
           </div>
         </div>
 

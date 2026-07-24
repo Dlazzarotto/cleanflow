@@ -11,7 +11,7 @@ export default async function NovoEstimatePage() {
   const [{ data: clients }, settings] = await Promise.all([
     supabase
       .from('clients')
-      .select('id, full_name, address, lat, lng')
+      .select('id, full_name, address, lat, lng, language')
       .eq('status', 'ativo')
       .order('full_name'),
     getPricingSettings(),
@@ -27,6 +27,7 @@ export default async function NovoEstimatePage() {
           address: c.address,
           lat: c.lat,
           lng: c.lng,
+          language: (c as any).language,
         }))}
         settings={settings}
       />

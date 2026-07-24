@@ -55,6 +55,7 @@ export async function saveEstimateAction(payload: {
   lat: number | null;
   lng: number | null;
   frequency: string | null;
+  language: string | null;
   input: EstimateInput;
   market_notes: string | null;
 }) {
@@ -73,6 +74,7 @@ export async function saveEstimateAction(payload: {
     lat: payload.lat,
     lng: payload.lng,
     frequency: payload.frequency,
+    language: payload.language ?? 'pt',
     bedrooms: payload.input.bedrooms,
     full_baths: payload.input.full_baths,
     half_baths: payload.input.half_baths,
@@ -120,7 +122,7 @@ export async function convertEstimateToClientAction(id: string) {
 
   const { data: e, error: fetchError } = await supabase
     .from('estimates')
-    .select('id, client_id, lead_name, lead_phone, lead_email, address, lat, lng, frequency')
+    .select('id, client_id, lead_name, lead_phone, lead_email, address, lat, lng, frequency, language')
     .eq('id', id)
     .single();
   if (fetchError || !e) throw new Error('Estimate não encontrado');
@@ -137,6 +139,7 @@ export async function convertEstimateToClientAction(id: string) {
       lat: e.lat,
       lng: e.lng,
       frequency: e.frequency || null,
+      language: e.language || 'pt',
     })
     .select('id')
     .single();
@@ -166,6 +169,7 @@ export async function updateEstimateAction(
     lat: number | null;
     lng: number | null;
     frequency: string | null;
+    language: string | null;
     input: EstimateInput;
     market_notes: string | null;
   }
@@ -186,6 +190,7 @@ export async function updateEstimateAction(
       lat: payload.lat,
       lng: payload.lng,
       frequency: payload.frequency,
+      language: payload.language ?? 'pt',
       bedrooms: payload.input.bedrooms,
       full_baths: payload.input.full_baths,
       half_baths: payload.input.half_baths,

@@ -30,6 +30,7 @@ export async function createClientAction(formData: FormData) {
     preferences: String(formData.get('preferences') ?? '') || null,
     products_notes: String(formData.get('products_notes') ?? '') || null,
     frequency: String(formData.get('frequency') ?? '') || null,
+    language: String(formData.get('language') ?? 'pt'),
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -216,6 +217,7 @@ export async function updateClientAction(id: string, formData: FormData) {
       preferences: String(formData.get('preferences') ?? '') || null,
       products_notes: String(formData.get('products_notes') ?? '') || null,
       frequency: String(formData.get('frequency') ?? '') || null,
+      language: String(formData.get('language') ?? 'pt'),
       status: String(formData.get('status') ?? 'ativo'),
     })
     .eq('id', id);
