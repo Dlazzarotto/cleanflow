@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
+import { PERMISSION_KEYS } from '@/lib/permissions';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 
 async function getCompanyId() {
@@ -289,4 +290,40 @@ export async function updateMyBookingStatusAction(
   });
   if (error) throw new Error(error.message);
   revalidatePath('/minha-agenda');
+}
+
+
+// ---------- CARGOS ----------
+export async function createPositionAction(formData: FormData) {
+  const { supabase, companyId } = await getCompanyId();
+  const permissions: Record<string, boolean> = {};
+  for (const { key } of PERMISSION_KEYS) {
+    permissions[key] = formData.get(`perm_${key}`) === 'on';
+  }
+  const { error } = await supabase.from('positions').insert({
+    company_id: companyId,
+    name: String(formData.get('name') ?? '').trim(),
+    permissions,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
+export async function deletePositionAction(id: string) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase.from('positions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
+export async function setMemberPositionAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const membershipId = String(formData.get('membership_id'));
+  const positionId = String(formData.get('position_id') ?? '');
+  const { error } = await supabase
+    .from('memberships')
+    .update({ position_id: positionId || null })
+    .eq('id', membershipId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
 }

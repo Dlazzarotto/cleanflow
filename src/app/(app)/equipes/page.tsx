@@ -6,7 +6,11 @@ import {
   addTeamMemberAction,
   removeTeamMemberAction,
   setMembershipActiveAction,
+  createPositionAction,
+  deletePositionAction,
+  setMemberPositionAction,
 } from '@/lib/actions';
+import { PERMISSION_KEYS } from '@/lib/permissions';
 import InviteForm from '@/components/InviteForm';
 import type { Team } from '@/lib/types';
 
@@ -24,15 +28,17 @@ export default async function EquipesPage() {
   const supabase = createClient();
   const { data: companyId } = await supabase.rpc('current_company_id');
 
-  const [{ data: teams }, { data: members }, { data: teamMembers }] = await Promise.all([
+  const [{ data: teams }, { data: members }, { data: teamMembers }, { data: positions }] = await Promise.all([
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
-      .select('id, user_id, full_name, role, active')
+      .select('id, user_id, full_name, role, active, position_id')
       .eq('company_id', companyId)
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
+    supabase.from('positions').select('*').order('name'),
   ]);
+  const positionList = positions ?? [];
 
   const teamList = (teams ?? []) as Team[];
   const memberList = members ?? [];
@@ -56,15 +62,73 @@ export default async function EquipesPage() {
                   <p className={`font-semibold ${!m.active ? 'line-through opacity-60' : ''}`}>{m.full_name}</p>
                   <p className="text-sm text-brand-800">{ROLE_LABEL[m.role] ?? m.role}{!m.active ? ' · acesso desativado' : ''}</p>
                 </div>
-                <form action={setMembershipActiveAction.bind(null, m.id, !m.active)}>
-                  <button className={m.active ? 'btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50' : 'btn-ghost'} type="submit">
-                    {m.active ? 'Desativar acesso' : 'Reativar acesso'}
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {m.role === 'cleaner' && (
+                    <form action={setMemberPositionAction} className="flex items-center gap-2">
+                      <input type="hidden" name="membership_id" value={m.id} />
+                      <select className="input !w-48" name="position_id" defaultValue={m.position_id ?? ''}>
+                        <option value="">Cargo padrão (tudo)</option>
+                        {positionList.map((p: any) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <button className="btn-ghost" type="submit">Aplicar</button>
+                    </form>
+                  )}
+                  <form action={setMembershipActiveAction.bind(null, m.id, !m.active)}>
+                    <button className={m.active ? 'btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50' : 'btn-ghost'} type="submit">
+                      {m.active ? 'Desativar acesso' : 'Reativar acesso'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Cargos com permissoes por clique */}
+      <div className="card">
+        <h2 className="mb-3 text-xl font-semibold text-brand-900">🏷️ Cargos e permissões</h2>
+        <p className="mb-4 text-brand-800">
+          Crie cargos (ex: Equipe de Limpeza, Motorista, Líder de Equipe) e marque o que cada um pode ver
+          no app. Valores e pagamentos permanecem sempre restritos à gestão, independentemente do cargo.
+        </p>
+
+        {positionList.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {positionList.map((p: any) => (
+              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-brand-100 px-4 py-3">
+                <div>
+                  <p className="font-semibold">{p.name}</p>
+                  <p className="text-sm text-brand-800">
+                    {PERMISSION_KEYS.filter((k) => p.permissions?.[k.key]).map((k) => k.label).join(' · ') || 'Nenhuma permissão marcada'}
+                  </p>
+                </div>
+                <form action={deletePositionAction.bind(null, p.id)}>
+                  <button className="btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50" type="submit">Excluir</button>
                 </form>
               </div>
             ))}
           </div>
         )}
+
+        <form action={createPositionAction} className="rounded-card bg-brand-50 p-4">
+          <div className="mb-3">
+            <label className="label" htmlFor="pos-name">Nome do cargo</label>
+            <input className="input" id="pos-name" name="name" required placeholder="Ex: Motorista" />
+          </div>
+          <p className="label">O que este cargo pode ver/fazer:</p>
+          <div className="mb-4 space-y-1">
+            {PERMISSION_KEYS.map((k) => (
+              <label key={k.key} className="flex min-h-touch cursor-pointer items-center gap-3">
+                <input type="checkbox" name={`perm_${k.key}`} defaultChecked className="h-5 w-5 accent-brand-700" />
+                {k.label}
+              </label>
+            ))}
+          </div>
+          <button className="btn-primary" type="submit">Criar cargo</button>
+        </form>
       </div>
 
       <InviteForm teams={teamList.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }))} />
