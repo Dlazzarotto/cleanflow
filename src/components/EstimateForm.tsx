@@ -1,7 +1,7 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveEstimateAction } from '@/lib/actions/estimates';
+import { saveEstimateAction, updateEstimateAction } from '@/lib/actions/estimates';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import {
   BEDROOM_TASKS,
@@ -96,43 +96,73 @@ function TaskCheck({
   );
 }
 
+export interface EstimateInitial {
+  id: string;
+  client_id: string | null;
+  lead_name: string | null;
+  lead_phone: string | null;
+  lead_email: string | null;
+  address: string | null;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+  frequency: string | null;
+  bedrooms: number;
+  full_baths: number;
+  half_baths: number;
+  bedroom_tasks: string[];
+  bathroom_tasks: string[];
+  extras: Record<string, string[]>;
+  laundry: boolean;
+  laundry_loads: number;
+  deep_clean: boolean;
+}
+
 export default function EstimateForm({
   clients,
   settings,
+  initial,
 }: {
   clients: Option[];
   settings: PricingSettings;
+  initial?: EstimateInitial;
 }) {
   const router = useRouter();
-  const [clientId, setClientId] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
-  const [leadName, setLeadName] = useState('');
-  const [leadPhone, setLeadPhone] = useState('');
-  const [leadEmail, setLeadEmail] = useState('');
+  const [clientId, setClientId] = useState(initial?.client_id ?? '');
+  const [address, setAddress] = useState(initial?.address ?? '');
+  const [city, setCity] = useState(initial?.city ?? '');
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
+    lat: initial?.lat ?? null,
+    lng: initial?.lng ?? null,
+  });
+  const [leadName, setLeadName] = useState(initial?.lead_name ?? '');
+  const [leadPhone, setLeadPhone] = useState(initial?.lead_phone ?? '');
+  const [leadEmail, setLeadEmail] = useState(initial?.lead_email ?? '');
 
-  const [bedrooms, setBedrooms] = useState(3);
-  const [fullBaths, setFullBaths] = useState(2);
-  const [halfBaths, setHalfBaths] = useState(0);
+  const [bedrooms, setBedrooms] = useState(initial?.bedrooms ?? 3);
+  const [fullBaths, setFullBaths] = useState(initial?.full_baths ?? 2);
+  const [halfBaths, setHalfBaths] = useState(initial?.half_baths ?? 0);
   const [bedroomTasks, setBedroomTasks] = useState<string[]>(
-    BEDROOM_TASKS.filter((t) => t.default).map((t) => t.id)
+    initial?.bedroom_tasks ?? BEDROOM_TASKS.filter((t) => t.default).map((t) => t.id)
   );
   const [bathroomTasks, setBathroomTasks] = useState<string[]>(
-    BATHROOM_TASKS.filter((t) => t.default).map((t) => t.id)
+    initial?.bathroom_tasks ?? BATHROOM_TASKS.filter((t) => t.default).map((t) => t.id)
   );
-  const [extras, setExtras] = useState<Record<string, string[]>>({
-    cozinha: EXTRA_ROOMS.find((r) => r.id === 'cozinha')!.tasks.filter((t) => t.default).map((t) => t.id),
-    sala: EXTRA_ROOMS.find((r) => r.id === 'sala')!.tasks.filter((t) => t.default).map((t) => t.id),
-  });
-  const [frequency, setFrequency] = useState('quinzenal');
-  const [laundry, setLaundry] = useState(false);
-  const [laundryLoads, setLaundryLoads] = useState(1);
-  const [deepClean, setDeepClean] = useState(false);
+  const [extras, setExtras] = useState<Record<string, string[]>>(
+    initial?.extras ?? {
+      cozinha: EXTRA_ROOMS.find((r) => r.id === 'cozinha')!.tasks.filter((t) => t.default).map((t) => t.id),
+      sala: EXTRA_ROOMS.find((r) => r.id === 'sala')!.tasks.filter((t) => t.default).map((t) => t.id),
+    }
+  );
+  const [frequency, setFrequency] = useState(initial?.frequency ?? 'quinzenal');
+  const [laundry, setLaundry] = useState(initial?.laundry ?? false);
+  const [laundryLoads, setLaundryLoads] = useState(initial?.laundry_loads ?? 1);
+  const [deepClean, setDeepClean] = useState(initial?.deep_clean ?? false);
 
   const [market, setMarket] = useState<Market | null>(null);
   const [marketError, setMarketError] = useState('');
   const [loadingMarket, setLoadingMarket] = useState(false);
+  const lastSearchedCity = useRef('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -185,11 +215,24 @@ export default function EstimateForm({
     setCoords({ lat: c?.lat ?? null, lng: c?.lng ?? null });
   }
 
+  // Dispara a pesquisa sozinha quando a cidade e definida (com debounce)
+  useEffect(() => {
+    const c = city.trim();
+    if (c.length < 3 || c === lastSearchedCity.current) return;
+    const t = setTimeout(() => {
+      lastSearchedCity.current = c;
+      searchMarket();
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city]);
+
   async function searchMarket() {
     if (!city.trim()) {
       setMarketError('Informe a cidade para pesquisar os preços da região.');
       return;
     }
+    lastSearchedCity.current = city.trim();
     setLoadingMarket(true);
     setMarketError('');
     setMarket(null);
@@ -214,7 +257,7 @@ export default function EstimateForm({
     setSaveError('');
     try {
       const c = clients.find((x) => x.id === clientId);
-      await saveEstimateAction({
+      const payload = {
         client_id: clientId || null,
         lead_name: clientId ? null : leadName.trim() || null,
         lead_phone: clientId ? null : leadPhone.trim() || null,
@@ -228,7 +271,12 @@ export default function EstimateForm({
         market_notes: market
           ? `Mercado em ${city}: ${usd(market.visit_low)}–${usd(market.visit_high)}/visita, ${usd(market.hourly_low)}–${usd(market.hourly_high)}/h. ${market.resumo}`
           : null,
-      });
+      };
+      if (initial?.id) {
+        await updateEstimateAction(initial.id, payload);
+      } else {
+        await saveEstimateAction(payload);
+      }
       router.push('/estimates');
       router.refresh();
     } catch {
@@ -410,7 +458,7 @@ export default function EstimateForm({
 
         <div className="card">
           <button className="btn-ghost w-full" type="button" onClick={searchMarket} disabled={loadingMarket}>
-            {loadingMarket ? 'Pesquisando…' : '🔍 Pesquisar preços da região'}
+            {loadingMarket ? '🔍 Pesquisando a região…' : market ? '🔄 Atualizar pesquisa' : '🔍 Pesquisar preços da região'}
           </button>
           {marketError && <p className="mt-2 text-red-700">{marketError}</p>}
           {market && (
@@ -425,7 +473,7 @@ export default function EstimateForm({
 
         {saveError && <p className="text-red-700">{saveError}</p>}
         <button className="btn-primary w-full" type="button" onClick={save} disabled={saving}>
-          {saving ? 'Salvando…' : 'Salvar estimate'}
+          {saving ? 'Salvando…' : initial?.id ? 'Salvar alterações' : 'Salvar estimate'}
         </button>
       </div>
     </div>

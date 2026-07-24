@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { formatMinutes } from '@/lib/pricing';
+import EmailButton from '@/components/EmailButton';
 import {
   getPricingSettings,
   savePricingSettingsAction,
@@ -116,6 +117,8 @@ export default async function EstimatesPage() {
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-brand-100 pt-3">
                 <Link href={`/estimates/${e.id}/documento`} className="btn-ghost">📄 Documento</Link>
+                <Link href={`/estimates/${e.id}/editar`} className="btn-ghost">✏️ Editar</Link>
+                <EmailButton estimateId={e.id} />
                 {!e.client_id && (
                   <form action={convertEstimateToClientAction.bind(null, e.id)}>
                     <button className="btn-ghost" type="submit">➕ Transformar em cliente</button>

@@ -161,3 +161,58 @@ export async function convertEstimateToClientAction(id: string) {
   revalidatePath('/estimates');
   revalidatePath('/clientes');
 }
+
+
+/** Atualiza um estimate existente, recalculando tempo e faixa de preco. */
+export async function updateEstimateAction(
+  id: string,
+  payload: {
+    client_id: string | null;
+    lead_name: string | null;
+    lead_phone: string | null;
+    lead_email: string | null;
+    address: string | null;
+    city: string | null;
+    lat: number | null;
+    lng: number | null;
+    frequency: string | null;
+    input: EstimateInput;
+    market_notes: string | null;
+  }
+) {
+  const { supabase } = await getCompanyId();
+  const settings = await getPricingSettings();
+  const result = calcEstimate(payload.input, settings);
+
+  const { error } = await supabase
+    .from('estimates')
+    .update({
+      client_id: payload.client_id,
+      lead_name: payload.client_id ? null : payload.lead_name,
+      lead_phone: payload.client_id ? null : payload.lead_phone,
+      lead_email: payload.client_id ? null : payload.lead_email,
+      address: payload.address,
+      city: payload.city,
+      lat: payload.lat,
+      lng: payload.lng,
+      frequency: payload.frequency,
+      bedrooms: payload.input.bedrooms,
+      full_baths: payload.input.full_baths,
+      half_baths: payload.input.half_baths,
+      extras: payload.input.extras,
+      bedroom_tasks: payload.input.bedroom_tasks,
+      bathroom_tasks: payload.input.bathroom_tasks,
+      laundry: payload.input.laundry,
+      laundry_loads: payload.input.laundry_loads,
+      deep_clean: payload.input.deep_clean,
+      minutes: result.minutes,
+      price_low: result.price_low,
+      price_high: result.price_high,
+      hourly_rate: settings.hourly_rate,
+      market_notes: payload.market_notes,
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/estimates');
+}
