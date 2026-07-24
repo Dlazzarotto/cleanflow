@@ -22,7 +22,7 @@ export default async function ContratoPage({ params }: { params: { id: string } 
 
   const e = estimate as any;
   const sections = buildServiceList(e);
-  const clientName = e.clients?.full_name ?? '____________________________';
+  const clientName = e.clients?.full_name ?? e.lead_name ?? '____________________________';
   const clientAddress = e.address ?? e.clients?.address ?? '____________________________';
   const companyName = company?.name ?? 'Empresa de Limpeza';
   const price = e.final_price ? usd(e.final_price) : `${usd(e.price_low)} – ${usd(e.price_high)}`;

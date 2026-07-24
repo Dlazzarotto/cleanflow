@@ -6,6 +6,7 @@ import {
   savePricingSettingsAction,
   updateEstimateStatusAction,
   approveEstimateAction,
+  convertEstimateToClientAction,
 } from '@/lib/actions/estimates';
 
 export const dynamic = 'force-dynamic';
@@ -90,7 +91,12 @@ export default async function EstimatesPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">
-                    {e.clients?.full_name ?? e.address ?? 'Lead sem cadastro'}
+                    {e.clients?.full_name ?? e.lead_name ?? e.address ?? 'Lead sem cadastro'}
+                    {!e.client_id && (
+                      <span className="ml-2 rounded-full bg-sun/20 px-2 py-0.5 text-sm font-medium text-brand-900">
+                        Lead
+                      </span>
+                    )}
                   </p>
                   <p className="text-brand-800">
                     {e.bedrooms} qt · {e.full_baths} ban{e.half_baths > 0 ? ` + ${e.half_baths} lavabo` : ''}
@@ -110,6 +116,11 @@ export default async function EstimatesPage() {
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-brand-100 pt-3">
                 <Link href={`/estimates/${e.id}/documento`} className="btn-ghost">📄 Documento</Link>
+                {!e.client_id && (
+                  <form action={convertEstimateToClientAction.bind(null, e.id)}>
+                    <button className="btn-ghost" type="submit">➕ Transformar em cliente</button>
+                  </form>
+                )}
                 {e.status === 'aprovado' && (
                   <Link href={`/estimates/${e.id}/contrato`} className="btn-ghost">📜 Contrato</Link>
                 )}

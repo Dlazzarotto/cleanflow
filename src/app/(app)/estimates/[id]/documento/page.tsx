@@ -20,7 +20,7 @@ export default async function EstimateDocumentoPage({ params }: { params: { id: 
 
   const e = estimate as any;
   const sections = buildServiceList(e);
-  const clientName = e.clients?.full_name ?? 'Cliente';
+  const clientName = e.clients?.full_name ?? e.lead_name ?? 'Cliente';
   const clientAddress = e.address ?? e.clients?.address ?? '';
   const validade = new Date(new Date(e.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -57,7 +57,7 @@ export default async function EstimateDocumentoPage({ params }: { params: { id: 
           <p className="font-semibold text-brand-800">Preparado para:</p>
           <p className="text-xl font-bold">{clientName}</p>
           {clientAddress && <p className="text-brand-800">{clientAddress}</p>}
-          {e.clients?.phone && <p className="text-brand-800">{e.clients.phone}</p>}
+          {(e.clients?.phone ?? e.lead_phone) && <p className="text-brand-800">{e.clients?.phone ?? e.lead_phone}</p>}
         </div>
 
         {/* Servicos */}

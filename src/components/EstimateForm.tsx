@@ -108,6 +108,9 @@ export default function EstimateForm({
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
+  const [leadName, setLeadName] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
 
   const [bedrooms, setBedrooms] = useState(3);
   const [fullBaths, setFullBaths] = useState(2);
@@ -213,6 +216,9 @@ export default function EstimateForm({
       const c = clients.find((x) => x.id === clientId);
       await saveEstimateAction({
         client_id: clientId || null,
+        lead_name: clientId ? null : leadName.trim() || null,
+        lead_phone: clientId ? null : leadPhone.trim() || null,
+        lead_email: clientId ? null : leadEmail.trim() || null,
         address: address || null,
         city: city || null,
         frequency,
@@ -246,6 +252,25 @@ export default function EstimateForm({
               ))}
             </select>
           </div>
+          {clientId === '' && (
+            <div className="rounded-card bg-brand-50 p-4">
+              <p className="mb-3 font-semibold text-brand-900">Dados do lead</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="label" htmlFor="lead-name">Nome</label>
+                  <input className="input" id="lead-name" value={leadName} onChange={(e) => setLeadName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="lead-phone">Telefone</label>
+                  <input className="input" id="lead-phone" type="tel" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="lead-email">Email</label>
+                  <input className="input" id="lead-email" type="email" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="label" htmlFor="est-address">Endereço</label>

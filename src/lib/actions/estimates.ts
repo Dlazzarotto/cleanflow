@@ -57,6 +57,9 @@ export async function savePricingSettingsAction(formData: FormData) {
 
 export async function saveEstimateAction(payload: {
   client_id: string | null;
+  lead_name: string | null;
+  lead_phone: string | null;
+  lead_email: string | null;
   address: string | null;
   city: string | null;
   lat: number | null;
@@ -72,6 +75,9 @@ export async function saveEstimateAction(payload: {
   const { error } = await supabase.from('estimates').insert({
     company_id: companyId,
     client_id: payload.client_id,
+    lead_name: payload.client_id ? null : payload.lead_name,
+    lead_phone: payload.client_id ? null : payload.lead_phone,
+    lead_email: payload.client_id ? null : payload.lead_email,
     address: payload.address,
     city: payload.city,
     lat: payload.lat,
@@ -115,4 +121,43 @@ export async function approveEstimateAction(formData: FormData) {
     .eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/estimates');
+}
+
+
+/** Transforma o lead de um estimate em cliente cadastrado e vincula ao estimate. */
+export async function convertEstimateToClientAction(id: string) {
+  const { supabase, companyId } = await getCompanyId();
+
+  const { data: e, error: fetchError } = await supabase
+    .from('estimates')
+    .select('id, client_id, lead_name, lead_phone, lead_email, address, lat, lng, frequency')
+    .eq('id', id)
+    .single();
+  if (fetchError || !e) throw new Error('Estimate não encontrado');
+  if (e.client_id) return; // ja tem cliente vinculado
+
+  const { data: created, error: insertError } = await supabase
+    .from('clients')
+    .insert({
+      company_id: companyId,
+      full_name: e.lead_name?.trim() || e.address || 'Cliente sem nome',
+      phone: e.lead_phone || null,
+      email: e.lead_email || null,
+      address: e.address || null,
+      lat: e.lat,
+      lng: e.lng,
+      frequency: e.frequency || null,
+    })
+    .select('id')
+    .single();
+  if (insertError || !created) throw new Error(insertError?.message ?? 'Falha ao criar cliente');
+
+  const { error: linkError } = await supabase
+    .from('estimates')
+    .update({ client_id: created.id })
+    .eq('id', id);
+  if (linkError) throw new Error(linkError.message);
+
+  revalidatePath('/estimates');
+  revalidatePath('/clientes');
 }
