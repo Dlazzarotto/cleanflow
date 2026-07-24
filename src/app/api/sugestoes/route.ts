@@ -31,6 +31,17 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number) 
 }
 
 export async function GET(request: Request) {
+  // Auditoria: rota administrativa — exige papel de gestao
+  try {
+    const { getAuth, isManager } = await import('@/lib/auth');
+    const ctx = await getAuth();
+    if (!isManager(ctx.role)) {
+      return NextResponse.json({ error: 'Acesso restrito à gestão.' }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('clientId');
   if (!clientId) {

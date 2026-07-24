@@ -8,6 +8,17 @@ import { etTodayRange } from '@/lib/tz';
  * houses: limpezas de hoje com coordenadas.
  */
 export async function GET() {
+  // Auditoria: rota administrativa — exige papel de gestao
+  try {
+    const { getAuth, isManager } = await import('@/lib/auth');
+    const ctx = await getAuth();
+    if (!isManager(ctx.role)) {
+      return NextResponse.json({ error: 'Acesso restrito à gestão.' }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  }
+
   const supabase = createClient();
   const {
     data: { user },
