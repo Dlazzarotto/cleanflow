@@ -2,13 +2,18 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-const NAV = [
+const MANAGER_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
   { href: '/calendario', label: 'Calendário', icon: '🗓️' },
   { href: '/estimates', label: 'Estimates', icon: '🧮' },
   { href: '/agendamentos', label: 'Agendamentos', icon: '📋' },
   { href: '/clientes', label: 'Clientes', icon: '👤' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
+  { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
+];
+
+const CLEANER_NAV = [
+  { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -18,27 +23,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role, companies(name)')
-    .eq('id', user.id)
-    .single();
+  const { data: companyId } = await supabase.rpc('current_company_id');
+  const { data: membership } = companyId
+    ? await supabase
+        .from('memberships')
+        .select('full_name, role, companies(name)')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .single()
+    : { data: null };
 
-  const companyName =
-    (profile as any)?.companies?.name ?? 'Sua empresa';
+  const companyName = (membership as any)?.companies?.name ?? 'Sua empresa';
+  const role = (membership as any)?.role ?? 'cleaner';
+  const nav = role === 'cleaner' ? CLEANER_NAV : MANAGER_NAV;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      {/* Sidebar (desktop) / topo (mobile) */}
       <aside className="bg-brand-900 text-white md:w-64 md:shrink-0 print:hidden">
         <div className="p-5">
           <p className="text-2xl font-bold">
             Clean<span className="text-aqua-400">Flow</span>
           </p>
           <p className="mt-1 text-brand-100 text-sm">{companyName}</p>
+          {(membership as any)?.full_name && (
+            <p className="text-brand-100 text-sm">{(membership as any).full_name}</p>
+          )}
         </div>
         <nav className="flex overflow-x-auto md:block">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}

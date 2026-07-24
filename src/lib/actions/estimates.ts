@@ -2,22 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getAuth } from '@/lib/auth';
 import { calcEstimate, DEFAULT_SETTINGS, type EstimateInput, type PricingSettings } from '@/lib/pricing';
 
 async function getCompanyId() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .single();
-  if (!profile) throw new Error('Perfil não encontrado');
-  return { supabase, companyId: profile.company_id as string };
+  const { supabase, companyId } = await getAuth();
+  return { supabase, companyId };
 }
 
 export async function getPricingSettings(): Promise<PricingSettings> {

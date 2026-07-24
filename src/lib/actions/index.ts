@@ -2,22 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getAuth } from '@/lib/auth';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 
 async function getCompanyId() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .single();
-  if (!profile) throw new Error('Perfil não encontrado');
-  return { supabase, companyId: profile.company_id as string };
+  const { supabase, companyId } = await getAuth();
+  return { supabase, companyId };
 }
 
 // ---------- CLIENTES ----------
@@ -201,4 +191,81 @@ export async function cancelBookingAction(input: { id: string; scope: 'one' | 's
   revalidatePath('/agendamentos');
   revalidatePath('/calendario');
   revalidatePath('/dashboard');
+}
+
+
+// ---------- EDICAO DE CLIENTE ----------
+export async function updateClientAction(id: string, formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      full_name: String(formData.get('full_name') ?? '').trim(),
+      phone: String(formData.get('phone') ?? '') || null,
+      email: String(formData.get('email') ?? '') || null,
+      address: String(formData.get('address') ?? '') || null,
+      lat: formData.get('lat') ? Number(formData.get('lat')) : undefined,
+      lng: formData.get('lng') ? Number(formData.get('lng')) : undefined,
+      door_code: String(formData.get('door_code') ?? '') || null,
+      has_pets: formData.get('has_pets') === 'on',
+      pets_notes: String(formData.get('pets_notes') ?? '') || null,
+      alarm_notes: String(formData.get('alarm_notes') ?? '') || null,
+      preferences: String(formData.get('preferences') ?? '') || null,
+      products_notes: String(formData.get('products_notes') ?? '') || null,
+      frequency: String(formData.get('frequency') ?? '') || null,
+      status: String(formData.get('status') ?? 'ativo'),
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/clientes');
+  redirect(`/clientes/${id}`);
+}
+
+// ---------- EDICAO DE EQUIPE ----------
+export async function updateTeamAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const id = String(formData.get('id'));
+  const { error } = await supabase
+    .from('teams')
+    .update({
+      name: String(formData.get('name') ?? '').trim(),
+      color: String(formData.get('color') ?? '#13706B'),
+      active: formData.get('active') === 'on',
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
+// ---------- MEMBROS DA EQUIPE ----------
+export async function addTeamMemberAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase.from('team_members').insert({
+    team_id: String(formData.get('team_id')),
+    profile_id: String(formData.get('user_id')),
+  });
+  if (error && !error.message.includes('duplicate')) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
+export async function removeTeamMemberAction(teamId: string, userId: string) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('team_id', teamId)
+    .eq('profile_id', userId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
+// ---------- VINCULO (ativar/desativar acesso) ----------
+export async function setMembershipActiveAction(membershipId: string, active: boolean) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('memberships')
+    .update({ active })
+    .eq('id', membershipId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
 }
