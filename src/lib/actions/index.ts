@@ -311,6 +311,24 @@ export async function createPositionAction(formData: FormData) {
   revalidatePath('/equipes');
 }
 
+export async function updatePositionAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const id = String(formData.get('id'));
+  const permissions: Record<string, boolean> = {};
+  for (const { key } of PERMISSION_KEYS) {
+    permissions[key] = formData.get(`perm_${key}`) === 'on';
+  }
+  const { error } = await supabase
+    .from('positions')
+    .update({
+      name: String(formData.get('name') ?? '').trim(),
+      permissions,
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/equipes');
+}
+
 export async function deletePositionAction(id: string) {
   const { supabase } = await getCompanyId();
   const { error } = await supabase.from('positions').delete().eq('id', id);

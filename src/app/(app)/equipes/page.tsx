@@ -7,6 +7,7 @@ import {
   removeTeamMemberAction,
   setMembershipActiveAction,
   createPositionAction,
+  updatePositionAction,
   deletePositionAction,
   setMemberPositionAction,
 } from '@/lib/actions';
@@ -98,17 +99,44 @@ export default async function EquipesPage() {
         {positionList.length > 0 && (
           <div className="mb-4 space-y-2">
             {positionList.map((p: any) => (
-              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-brand-100 px-4 py-3">
-                <div>
-                  <p className="font-semibold">{p.name}</p>
-                  <p className="text-sm text-brand-800">
-                    {PERMISSION_KEYS.filter((k) => p.permissions?.[k.key]).map((k) => k.label).join(' · ') || 'Nenhuma permissão marcada'}
-                  </p>
-                </div>
-                <form action={deletePositionAction.bind(null, p.id)}>
-                  <button className="btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50" type="submit">Excluir</button>
+              <details key={p.id} className="rounded-card border border-brand-100 px-4 py-3">
+                <summary className="flex min-h-touch cursor-pointer flex-wrap items-center justify-between gap-2">
+                  <span>
+                    <span className="font-semibold">{p.name}</span>
+                    <span className="ml-2 text-sm text-brand-800">
+                      {PERMISSION_KEYS.filter((k) => p.permissions?.[k.key]).map((k) => k.label).join(' · ') || 'Nenhuma permissão marcada'}
+                    </span>
+                  </span>
+                  <span className="text-sm font-semibold text-brand-700">✏️ Editar</span>
+                </summary>
+                <form action={updatePositionAction} className="mt-3 border-t border-brand-100 pt-3">
+                  <input type="hidden" name="id" value={p.id} />
+                  <div className="mb-3">
+                    <label className="label" htmlFor={`pos-name-${p.id}`}>Nome do cargo</label>
+                    <input className="input" id={`pos-name-${p.id}`} name="name" required defaultValue={p.name} />
+                  </div>
+                  <p className="label">O que este cargo pode ver/fazer:</p>
+                  <div className="mb-4 space-y-1">
+                    {PERMISSION_KEYS.map((k) => (
+                      <label key={k.key} className="flex min-h-touch cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          name={`perm_${k.key}`}
+                          defaultChecked={Boolean(p.permissions?.[k.key])}
+                          className="h-5 w-5 accent-brand-700"
+                        />
+                        {k.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="btn-primary" type="submit">Salvar alterações</button>
+                  </div>
                 </form>
-              </div>
+                <form action={deletePositionAction.bind(null, p.id)} className="mt-2">
+                  <button className="btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50" type="submit">Excluir cargo</button>
+                </form>
+              </details>
             ))}
           </div>
         )}
