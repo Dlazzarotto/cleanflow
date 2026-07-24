@@ -1,3 +1,4 @@
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { createClientAction } from '@/lib/actions';
 
 export default function NovoClientePage() {
@@ -21,7 +22,7 @@ export default function NovoClientePage() {
         </div>
         <div>
           <label className="label" htmlFor="address">Endereço</label>
-          <input className="input" id="address" name="address" />
+          <AddressAutocomplete />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
