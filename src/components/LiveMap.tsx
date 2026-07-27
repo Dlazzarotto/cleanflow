@@ -77,6 +77,7 @@ export default function LiveMap() {
           iconAnchor: [13, 13],
         }),
       })
+        .bindTooltip('🏢 ' + data.base.name + ' (sede)', { direction: 'top', offset: [0, -12] })
         .bindPopup('<strong>' + data.base.name + '</strong><br/>Sede')
         .addTo(g.base);
     }
@@ -94,6 +95,10 @@ export default function LiveMap() {
         fillColor: isAtivo ? '#2BB3A3' : '#9AA8A6',
         fillOpacity: isAtivo ? 0.9 : 0.6,
       })
+        .bindTooltip(
+          c.name + (c.unit ? ' · ' + c.unit : '') + (isAtivo ? '' : ' (inativo)'),
+          { direction: 'top', offset: [0, -6] }
+        )
         .bindPopup(
           '<strong>' + c.name + '</strong>' + (c.unit ? ' · ' + c.unit : '') + '<br/>' +
           (isAtivo ? 'Cliente ativo' : 'Cliente inativo') +
@@ -112,6 +117,12 @@ export default function LiveMap() {
           fillColor: h.team_color ?? '#8AA6A3',
           fillOpacity: h.status === 'concluido' ? 0.45 : 0.95,
         })
+          .bindTooltip(
+            '<strong>' + h.client + '</strong>' + (h.unit ? ' · ' + h.unit : '') + '<br/>' +
+            new Date(h.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) +
+            (h.team_name ? ' · ' + h.team_name : '') + ' · ' + (STATUS_LABEL[h.status] ?? h.status),
+            { direction: 'top', offset: [0, -12] }
+          )
           .bindPopup(
             '<strong>' + h.client + '</strong>' + (h.unit ? ' · ' + h.unit : '') + '<br/>' +
             new Date(h.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) +
@@ -143,6 +154,10 @@ export default function LiveMap() {
             iconAnchor: [15, 15],
           }),
         })
+          .bindTooltip(
+            '🧍 ' + p.name + (p.team_name ? ' · ' + p.team_name : '') + ' · há ' + p.minutes_ago + ' min',
+            { direction: 'top', offset: [0, -16] }
+          )
           .bindPopup(
             '<strong>' + p.name + '</strong>' + (p.team_name ? ' · ' + p.team_name : '') +
             '<br/>há ' + p.minutes_ago + ' min'
@@ -293,7 +308,8 @@ export default function LiveMap() {
         🏢 sede · círculos grandes = limpezas de hoje na <strong>cor da equipe</strong> responsável
         (mais claras quando concluídas) · pontos verdes = clientes ativos · cinzas = inativos ·
         marcadores com iniciais = pessoas da equipe nos últimos 15 minutos. Atualiza a cada 60s;
-        toque nas etiquetas para ligar e desligar camadas.
+        Passe o mouse sobre um ponto para ver o cliente; toque ou clique para os detalhes.
+        Use as etiquetas para ligar e desligar camadas.
       </p>
     </div>
   );
