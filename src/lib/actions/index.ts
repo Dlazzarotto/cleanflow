@@ -208,8 +208,8 @@ export async function updateClientAction(id: string, formData: FormData) {
       email: String(formData.get('email') ?? '') || null,
       address: String(formData.get('address') ?? '') || null,
       unit: String(formData.get('unit') ?? '') || null,
-      lat: formData.get('lat') ? Number(formData.get('lat')) : undefined,
-      lng: formData.get('lng') ? Number(formData.get('lng')) : undefined,
+      ...(formData.get('lat') ? { lat: Number(formData.get('lat')) } : {}),
+      ...(formData.get('lng') ? { lng: Number(formData.get('lng')) } : {}),
       door_code: String(formData.get('door_code') ?? '') || null,
       has_pets: formData.get('has_pets') === 'on',
       pets_notes: String(formData.get('pets_notes') ?? '') || null,
@@ -391,4 +391,16 @@ export async function updateCompanyAction(formData: FormData) {
     .eq('id', companyId);
   if (error) throw new Error(error.message);
   revalidatePath('/configuracoes');
+}
+
+
+// ---------- GEOCODIFICACAO EM LOTE ----------
+export async function saveClientCoordsAction(id: string, lat: number, lng: number, address?: string) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('clients')
+    .update({ lat, lng, ...(address ? { address } : {}) })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/clientes');
 }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import type { Client } from '@/lib/types';
+import GeocodeBatch from '@/components/GeocodeBatch';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,9 @@ export default async function ClientesPage() {
     .select('*')
     .order('created_at', { ascending: false });
   const clients = (data ?? []) as Client[];
+  const pending = clients
+    .filter((c) => !c.lat && c.address)
+    .map((c) => ({ id: c.id, full_name: c.full_name, address: c.address as string }));
 
   return (
     <div>
@@ -20,6 +24,8 @@ export default async function ClientesPage() {
         <h1 className="text-3xl font-bold text-brand-900">Clientes</h1>
         <Link href="/clientes/novo" className="btn-primary">+ Novo cliente</Link>
       </div>
+
+      <GeocodeBatch pending={pending} />
 
       {clients.length === 0 ? (
         <div className="card text-brand-800">
@@ -35,6 +41,11 @@ export default async function ClientesPage() {
                 {c.frequency && (
                   <span className="rounded-full bg-brand-100 px-3 py-1 font-medium text-brand-900 capitalize">
                     {c.frequency}
+                  </span>
+                )}
+                {!c.lat && (
+                  <span className="rounded-full bg-sun/20 px-3 py-1 font-medium text-brand-900">
+                    📍 sem coordenadas
                   </span>
                 )}
                 {c.has_pets && (

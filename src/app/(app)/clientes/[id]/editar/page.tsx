@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { updateClientAction } from '@/lib/actions';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 import type { Client } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -33,9 +34,11 @@ export default async function EditarClientePage({ params }: { params: { id: stri
         </div>
         <div>
           <label className="label" htmlFor="address">Endereço</label>
-          <input className="input" id="address" name="address" defaultValue={c.address ?? ''} />
+          <AddressAutocomplete id="address" initialValue={c.address ?? ''} />
           <p className="mt-1 text-sm text-brand-800">
-            Para atualizar as coordenadas de rota, cadastre o endereço novo pela busca (em breve aqui também).
+            {c.lat
+              ? '✓ Coordenadas salvas — usadas em rotas, sugestões e mapa.'
+              : '⚠️ Sem coordenadas. Escolha o endereço pela lista da busca para salvá-las.'}
           </p>
         </div>
         <div>
