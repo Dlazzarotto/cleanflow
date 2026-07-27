@@ -10,6 +10,29 @@ declare global {
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
 
+const BASEMAPS = {
+  clean: {
+    label: '🧼 Clean',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '© OpenStreetMap · © CARTO',
+    maxZoom: 20,
+  },
+  ruas: {
+    label: '🗺️ Ruas',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  },
+  satelite: {
+    label: '🛰️ Satélite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+  },
+} as const;
+
+type BasemapKey = keyof typeof BASEMAPS;
+
 const STATUS_LABEL: Record<string, string> = {
   agendado: 'Agendada',
   a_caminho: 'Equipe a caminho',
@@ -33,6 +56,8 @@ export default function LiveMap() {
   const [layers, setLayers] = useState<Layers>({ hoje: true, ativos: true, inativos: false, equipe: true });
   const [counts, setCounts] = useState({ hoje: 0, ativos: 0, inativos: 0, equipe: 0 });
   const [loading, setLoading] = useState(true);
+  const [basemap, setBasemap] = useState<BasemapKey>('clean');
+  const tileRef = useRef<any>(null);
 
   const draw = useCallback((data: any, visible: Layers) => {
     const L = window.L;
@@ -174,9 +199,10 @@ export default function LiveMap() {
       if (cancelled || !containerRef.current || mapRef.current) return;
       const L = window.L;
       mapRef.current = L.map(containerRef.current).setView([42.42, -71.06], 11);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19,
+      const bm = BASEMAPS.clean;
+      tileRef.current = L.tileLayer(bm.url, {
+        attribution: bm.attribution,
+        maxZoom: bm.maxZoom,
       }).addTo(mapRef.current);
       groupsRef.current = {
         base: L.layerGroup().addTo(mapRef.current),
@@ -204,6 +230,18 @@ export default function LiveMap() {
     if (dataRef.current) draw(dataRef.current, layers);
   }, [layers, draw]);
 
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !mapRef.current || !tileRef.current) return;
+    const bm = BASEMAPS[basemap];
+    mapRef.current.removeLayer(tileRef.current);
+    tileRef.current = L.tileLayer(bm.url, {
+      attribution: bm.attribution,
+      maxZoom: bm.maxZoom,
+    }).addTo(mapRef.current);
+    tileRef.current.bringToBack();
+  }, [basemap]);
+
   const toggle = (key: keyof Layers) => setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const chip = (key: keyof Layers, dot: string, label: string, count: number) => (
@@ -223,6 +261,23 @@ export default function LiveMap() {
 
   return (
     <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {(Object.keys(BASEMAPS) as BasemapKey[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setBasemap(k)}
+            className={`flex min-h-touch items-center gap-2 rounded-card border px-4 py-2 text-sm font-medium ${
+              basemap === k
+                ? 'border-brand-700 bg-brand-900 text-white'
+                : 'border-brand-100 bg-white text-brand-800'
+            }`}
+          >
+            {BASEMAPS[k].label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-3 flex flex-wrap gap-2">
         {chip('hoje', '🔵', 'Limpezas de hoje', counts.hoje)}
         {chip('ativos', '🟢', 'Clientes ativos', counts.ativos)}
