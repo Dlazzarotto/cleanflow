@@ -5,7 +5,11 @@ import { getPricingSettings } from '@/lib/actions/estimates';
 
 export const dynamic = 'force-dynamic';
 
-export default async function NovoEstimatePage() {
+export default async function NovoEstimatePage({
+  searchParams,
+}: {
+  searchParams: { cliente?: string };
+}) {
   await requireManager();
   const supabase = createClient();
   const [{ data: clients }, settings] = await Promise.all([
@@ -30,6 +34,7 @@ export default async function NovoEstimatePage() {
           language: (c as any).language,
         }))}
         settings={settings}
+        preselectClientId={searchParams.cliente}
       />
     </div>
   );

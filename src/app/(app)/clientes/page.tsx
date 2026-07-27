@@ -7,6 +7,7 @@ import GeocodeBatch from '@/components/GeocodeBatch';
 export const dynamic = 'force-dynamic';
 
 const TABS: { key: ClientStatus; label: string; icon: string }[] = [
+  { key: 'lead', label: 'Leads', icon: '🌱' },
   { key: 'ativo', label: 'Ativos', icon: '🟢' },
   { key: 'em_espera', label: 'Em espera', icon: '🟡' },
   { key: 'inativo', label: 'Inativos', icon: '⚪' },
@@ -82,6 +83,11 @@ export default async function ClientesPage({
             <Link key={c.id} href={`/clientes/${c.id}`} className="card block hover:border-aqua-500">
               <p className="text-xl font-semibold">{c.full_name}</p>
               <p className="text-brand-800">{c.address ?? 'Sem endereço'}</p>
+              {c.status === 'deletado' && (c as any).ban_reason && (
+                <p className="mt-2 rounded-card bg-red-50 p-2 text-sm text-red-800">
+                  🚫 {(c as any).ban_reason}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap gap-2 text-sm">
                 {c.frequency && (
                   <span className="rounded-full bg-brand-100 px-3 py-1 font-medium text-brand-900 capitalize">

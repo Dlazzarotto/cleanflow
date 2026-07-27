@@ -125,18 +125,21 @@ export default function EstimateForm({
   clients,
   settings,
   initial,
+  preselectClientId,
 }: {
   clients: Option[];
   settings: PricingSettings;
   initial?: EstimateInitial;
+  preselectClientId?: string;
 }) {
   const router = useRouter();
-  const [clientId, setClientId] = useState(initial?.client_id ?? '');
-  const [address, setAddress] = useState(initial?.address ?? '');
+  const preselected = preselectClientId ? clients.find((c) => c.id === preselectClientId) : undefined;
+  const [clientId, setClientId] = useState(initial?.client_id ?? preselected?.id ?? '');
+  const [address, setAddress] = useState(initial?.address ?? preselected?.address ?? '');
   const [city, setCity] = useState(initial?.city ?? '');
   const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
-    lat: initial?.lat ?? null,
-    lng: initial?.lng ?? null,
+    lat: initial?.lat ?? preselected?.lat ?? null,
+    lng: initial?.lng ?? preselected?.lng ?? null,
   });
   const [leadName, setLeadName] = useState(initial?.lead_name ?? '');
   const [leadPhone, setLeadPhone] = useState(initial?.lead_phone ?? '');

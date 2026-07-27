@@ -8,6 +8,7 @@ const MANAGER_NAV = [
   { href: '/estimates', label: 'Estimates', icon: '🧮' },
   { href: '/agendamentos', label: 'Agendamentos', icon: '📋' },
   { href: '/clientes', label: 'Clientes', icon: '👤' },
+  { href: '/marketing', label: 'Marketing', icon: '📣' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/mapa', label: 'Mapa', icon: '🗺️' },

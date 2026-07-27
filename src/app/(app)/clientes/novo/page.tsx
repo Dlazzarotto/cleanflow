@@ -55,6 +55,19 @@ export default async function NovoClientePage() {
             <option value="fr">🇫🇷 Français</option>
           </select>
         </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="status">Situação</label>
+            <select className="input" id="status" name="status" defaultValue="lead">
+              <option value="lead">🌱 Lead (ainda vai receber orçamento)</option>
+              <option value="ativo">🟢 Cliente ativo</option>
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="source">Origem</label>
+            <input className="input" id="source" name="source" placeholder="Ex: indicação, Google, Instagram" />
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <input type="checkbox" id="has_pets" name="has_pets" className="h-6 w-6 accent-brand-700" />
           <label htmlFor="has_pets" className="font-medium text-brand-800">Tem pets</label>

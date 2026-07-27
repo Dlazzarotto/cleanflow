@@ -23,9 +23,10 @@ export interface Profile {
   phone: string | null;
 }
 
-export type ClientStatus = 'ativo' | 'em_espera' | 'inativo' | 'deletado';
+export type ClientStatus = 'lead' | 'ativo' | 'em_espera' | 'inativo' | 'deletado';
 
 export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
+  lead: 'Lead',
   ativo: 'Ativo',
   em_espera: 'Em espera',
   inativo: 'Inativo',
@@ -50,6 +51,11 @@ export interface Client {
   products_notes: string | null;
   frequency: 'unica' | 'semanal' | 'quinzenal' | 'mensal' | null;
   status: ClientStatus;
+  ban_reason: string | null;
+  banned_at: string | null;
+  source: string | null;
+  marketing_opt_in: boolean;
+  lost_reason: string | null;
   created_at: string;
 }
 
@@ -72,6 +78,7 @@ export interface Service {
 export interface Booking {
   id: string;
   company_id: string;
+  type?: 'limpeza' | 'visita';
   client_id: string;
   team_id: string | null;
   service_id: string | null;

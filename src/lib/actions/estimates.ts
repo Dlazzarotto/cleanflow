@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
 import { calcEstimate, DEFAULT_SETTINGS, type EstimateInput, type PricingSettings } from '@/lib/pricing';
+import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 
 async function getCompanyId() {
   const { supabase, companyId } = await getAuth();
@@ -229,4 +230,55 @@ export async function updateEstimateAction(
   if (error) throw new Error(error.message);
 
   revalidatePath('/estimates');
+}
+
+
+/**
+ * Gera a serie de limpezas a partir de um estimate aprovado.
+ * Usa a frequencia e o preco fechado do estimate.
+ */
+export async function createRecurrenceFromEstimateAction(formData: FormData) {
+  const { supabase, companyId } = await getCompanyId();
+  const id = String(formData.get('estimate_id'));
+  const date = String(formData.get('date') ?? '');
+  const time = String(formData.get('time') ?? '09:00');
+  const teamId = String(formData.get('team_id') ?? '') || null;
+  const occurrences = Math.min(Math.max(Number(formData.get('occurrences') ?? 12), 1), 52);
+
+  const { data: e, error: fetchError } = await supabase
+    .from('estimates')
+    .select('id, client_id, frequency, minutes, final_price, price_low')
+    .eq('id', id)
+    .single();
+  if (fetchError || !e) throw new Error('Estimate não encontrado');
+  if (!e.client_id) throw new Error('Converta o lead em cliente antes de agendar a recorrência');
+
+  const step =
+    e.frequency === 'semanal' ? 7 : e.frequency === 'quinzenal' ? 14 : e.frequency === 'mensal' ? 28 : 0;
+  const total = step > 0 ? occurrences : 1;
+  const seriesId = step > 0 ? crypto.randomUUID() : null;
+  const price = Number(e.final_price ?? e.price_low ?? 0);
+
+  const rows = Array.from({ length: total }, (_, i) => ({
+    company_id: companyId,
+    type: 'limpeza',
+    client_id: e.client_id,
+    team_id: teamId,
+    scheduled_at: etToUtcIso(addDaysYmd(date, i * step), time),
+    duration_minutes: e.minutes ?? 120,
+    price,
+    status: 'agendado',
+    series_id: seriesId,
+  }));
+
+  const { error } = await supabase.from('bookings').insert(rows);
+  if (error) throw new Error(error.message);
+
+  await supabase.from('estimates').update({ series_id: seriesId }).eq('id', id);
+  await supabase.from('clients').update({ status: 'ativo' }).eq('id', e.client_id);
+
+  revalidatePath('/calendario');
+  revalidatePath('/agendamentos');
+  revalidatePath('/estimates');
+  redirect('/calendario');
 }

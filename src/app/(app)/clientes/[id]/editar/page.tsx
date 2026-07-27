@@ -42,6 +42,10 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           </p>
         </div>
         <div>
+          <label className="label" htmlFor="source">Origem</label>
+          <input className="input" id="source" name="source" defaultValue={(c as any).source ?? ''} placeholder="Ex: indicação, Google, Instagram" />
+        </div>
+        <div>
           <label className="label" htmlFor="unit">Unidade / apartamento (se prédio)</label>
           <input className="input" id="unit" name="unit" defaultValue={c.unit ?? ''} placeholder="Ex: Apt 3B" />
         </div>
@@ -93,11 +97,15 @@ export default async function EditarClientePage({ params }: { params: { id: stri
         <div>
           <label className="label" htmlFor="status">Status</label>
           <select className="input" id="status" name="status" defaultValue={c.status}>
+            <option value="lead">Lead</option>
             <option value="ativo">Ativo</option>
             <option value="em_espera">Em espera (estimate enviado, aguardando resposta)</option>
             <option value="inativo">Inativo</option>
-            <option value="deletado">Deletado</option>
           </select>
+          <p className="mt-1 text-sm text-brand-800">
+            Para banir um cliente (deletado), use o botão 🚫 na ficha do cliente — exige motivo e
+            confirmação de senha, e é restrito ao dono da empresa.
+          </p>
         </div>
         <button className="btn-primary w-full" type="submit">Salvar alterações</button>
       </form>

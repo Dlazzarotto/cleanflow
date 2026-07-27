@@ -31,6 +31,8 @@ export async function createClientAction(formData: FormData) {
     products_notes: String(formData.get('products_notes') ?? '') || null,
     frequency: String(formData.get('frequency') ?? '') || null,
     language: String(formData.get('language') ?? 'pt'),
+    status: String(formData.get('status') ?? 'lead'),
+    source: String(formData.get('source') ?? '') || null,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -64,6 +66,7 @@ export async function createBookingAction(formData: FormData) {
 
   const base = {
     company_id: companyId,
+    type: String(formData.get('type') ?? 'limpeza'),
     client_id: String(formData.get('client_id')),
     team_id: String(formData.get('team_id') ?? '') || null,
     duration_minutes: Number(formData.get('duration_minutes') ?? 120),
@@ -219,6 +222,7 @@ export async function updateClientAction(id: string, formData: FormData) {
       frequency: String(formData.get('frequency') ?? '') || null,
       language: String(formData.get('language') ?? 'pt'),
       status: String(formData.get('status') ?? 'ativo'),
+      source: String(formData.get('source') ?? '') || null,
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
@@ -403,4 +407,101 @@ export async function saveClientCoordsAction(id: string, lat: number, lng: numbe
     .eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
+}
+
+
+// ---------- BANIMENTO DE CLIENTE (somente owner, com senha e motivo) ----------
+export async function banClientAction(input: {
+  id: string;
+  reason: string;
+  password: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { supabase, userId, role } = await getAuth();
+
+  if (role !== 'owner') {
+    return { ok: false, error: 'Apenas o dono da empresa pode banir um cliente.' };
+  }
+  const reason = input.reason.trim();
+  if (reason.length < 10) {
+    return { ok: false, error: 'Descreva o motivo do banimento (mínimo 10 caracteres).' };
+  }
+
+  // Confirma a identidade validando a senha, sem afetar a sessão atual
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const email = user?.email;
+  if (!email) return { ok: false, error: 'Não foi possível confirmar sua identidade.' };
+
+  const { createClient: createPlainClient } = await import('@supabase/supabase-js');
+  const check = createPlainClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+  const { error: authError } = await check.auth.signInWithPassword({
+    email,
+    password: input.password,
+  });
+  if (authError) {
+    return { ok: false, error: 'Senha incorreta. O cliente não foi banido.' };
+  }
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      status: 'deletado',
+      ban_reason: reason,
+      banned_at: new Date().toISOString(),
+      banned_by: userId,
+    })
+    .eq('id', input.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath('/clientes');
+  revalidatePath(`/clientes/${input.id}`);
+  return { ok: true };
+}
+
+export async function unbanClientAction(id: string) {
+  const { supabase, role } = await getAuth();
+  if (role !== 'owner') {
+    throw new Error('Apenas o dono da empresa pode reverter um banimento.');
+  }
+  const { error } = await supabase
+    .from('clients')
+    .update({ status: 'inativo' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/clientes');
+  revalidatePath(`/clientes/${id}`);
+}
+
+
+// ---------- MARKETING ----------
+export async function setMarketingOptInAction(id: string, value: boolean) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase.from('clients').update({ marketing_opt_in: value }).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/marketing');
+}
+
+export async function saveLostReasonAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('clients')
+    .update({ lost_reason: String(formData.get('lost_reason') ?? '') || null })
+    .eq('id', String(formData.get('id')));
+  if (error) throw new Error(error.message);
+  revalidatePath('/marketing');
+}
+
+export async function markContactedAction(id: string) {
+  const { supabase } = await getCompanyId();
+  const { error } = await supabase
+    .from('clients')
+    .update({ last_contact_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/marketing');
 }

@@ -14,6 +14,7 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
   const [time, setTime] = useState('');
   const [teamId, setTeamId] = useState('');
   const [repeat, setRepeat] = useState('nao');
+  const [tipo, setTipo] = useState('limpeza');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestMessage, setSuggestMessage] = useState('');
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -51,6 +52,19 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
 
   return (
     <form action={createBookingAction} className="card space-y-4">
+      <div>
+        <label className="label" htmlFor="type">Tipo</label>
+        <select className="input" id="type" name="type" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+          <option value="limpeza">🧹 Limpeza</option>
+          <option value="visita">👋 Visita de orçamento</option>
+        </select>
+        {tipo === 'visita' && (
+          <p className="mt-1 text-sm text-brand-800">
+            Visitas entram na rota da equipe como as limpezas, mas sem preço. Ao concluir,
+            você cria o estimate a partir dela.
+          </p>
+        )}
+      </div>
       <div>
         <label className="label" htmlFor="client_id">Cliente *</label>
         <select
@@ -128,7 +142,7 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="label" htmlFor="duration_minutes">Duração (min)</label>
-          <input className="input" id="duration_minutes" name="duration_minutes" type="number" defaultValue={120} min={30} step={15} />
+          <input className="input" id="duration_minutes" name="duration_minutes" type="number" defaultValue={tipo === 'visita' ? 45 : 120} min={15} step={15} key={tipo} />
         </div>
         <div>
           <label className="label" htmlFor="price">Preço (USD)</label>
@@ -176,7 +190,7 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
       </div>
 
       <button className="btn-primary w-full" type="submit">
-        {repeat === 'nao' ? 'Agendar limpeza' : 'Agendar série de limpezas'}
+        {tipo === 'visita' ? 'Agendar visita' : repeat === 'nao' ? 'Agendar limpeza' : 'Agendar série de limpezas'}
       </button>
     </form>
   );

@@ -87,6 +87,7 @@ export default async function AgendamentosPage() {
               <div key={b.id} className="card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">
+                    {b.type === 'visita' ? '👋 ' : ''}
                     {new Date(b.scheduled_at).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}{' '}
                     {new Date(b.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{' '}
                     — {b.clients?.full_name}
@@ -111,7 +112,12 @@ export default async function AgendamentosPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {b.type === 'visita' && (
+                    <Link href={`/estimates/novo?cliente=${b.client_id}`} className="btn-ghost">
+                      🧮 Criar estimate
+                    </Link>
+                  )}
                   {next && (
                     <form action={updateBookingStatusAction.bind(null, b.id, next.to)}>
                       <button className="btn-primary" type="submit">{next.label}</button>

@@ -3,6 +3,7 @@ import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatMinutes } from '@/lib/pricing';
 import EmailButton from '@/components/EmailButton';
+import RecurrenceFromEstimate from '@/components/RecurrenceFromEstimate';
 import {
   getPricingSettings,
   savePricingSettingsAction,
@@ -27,14 +28,16 @@ function usd(n: number) {
 export default async function EstimatesPage() {
   await requireManager();
   const supabase = createClient();
-  const [{ data: estimates }, settings] = await Promise.all([
+  const [{ data: estimates }, settings, { data: teamRows }] = await Promise.all([
     supabase
       .from('estimates')
       .select('*, clients(full_name)')
       .order('created_at', { ascending: false })
       .limit(50),
     getPricingSettings(),
+    supabase.from('teams').select('id, name').eq('active', true).order('name'),
   ]);
+  const teamOptions = (teamRows ?? []).map((t: any) => ({ id: t.id, name: t.name }));
 
   return (
     <div>
@@ -128,6 +131,14 @@ export default async function EstimatesPage() {
                 )}
                 {e.status === 'aprovado' && (
                   <Link href={`/estimates/${e.id}/contrato`} className="btn-ghost">📜 Contrato</Link>
+                )}
+                {e.status === 'aprovado' && e.client_id && (
+                  <RecurrenceFromEstimate
+                    estimateId={e.id}
+                    frequency={e.frequency}
+                    teams={teamOptions}
+                    alreadyScheduled={Boolean(e.series_id)}
+                  />
                 )}
                 {e.status === 'rascunho' && (
                   <form action={updateEstimateStatusAction.bind(null, e.id, 'enviado')}>
