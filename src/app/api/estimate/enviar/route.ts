@@ -126,6 +126,9 @@ export async function POST(request: Request) {
   if (e.status === 'rascunho') {
     await supabase.from('estimates').update({ status: 'enviado' }).eq('id', e.id);
   }
+  if (e.client_id) {
+    await supabase.from('clients').update({ status: 'em_espera' }).eq('id', e.client_id).neq('status', 'ativo');
+  }
 
   return NextResponse.json({ ok: true, to });
 }

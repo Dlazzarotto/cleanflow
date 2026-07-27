@@ -94,7 +94,9 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           <label className="label" htmlFor="status">Status</label>
           <select className="input" id="status" name="status" defaultValue={c.status}>
             <option value="ativo">Ativo</option>
+            <option value="em_espera">Em espera (estimate enviado, aguardando resposta)</option>
             <option value="inativo">Inativo</option>
+            <option value="deletado">Deletado</option>
           </select>
         </div>
         <button className="btn-primary w-full" type="submit">Salvar alterações</button>

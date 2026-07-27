@@ -23,6 +23,15 @@ export interface Profile {
   phone: string | null;
 }
 
+export type ClientStatus = 'ativo' | 'em_espera' | 'inativo' | 'deletado';
+
+export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
+  ativo: 'Ativo',
+  em_espera: 'Em espera',
+  inativo: 'Inativo',
+  deletado: 'Deletado',
+};
+
 export interface Client {
   id: string;
   company_id: string;
@@ -40,7 +49,7 @@ export interface Client {
   preferences: string | null;
   products_notes: string | null;
   frequency: 'unica' | 'semanal' | 'quinzenal' | 'mensal' | null;
-  status: 'ativo' | 'inativo';
+  status: ClientStatus;
   created_at: string;
 }
 

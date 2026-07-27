@@ -8,7 +8,7 @@ export default async function NovoAgendamentoPage() {
   await requireManager();
   const supabase = createClient();
   const [{ data: clients }, { data: teams }] = await Promise.all([
-    supabase.from('clients').select('id, full_name').eq('status', 'ativo').order('full_name'),
+    supabase.from('clients').select('id, full_name').in('status', ['ativo', 'em_espera']).order('full_name'),
     supabase.from('teams').select('id, name').eq('active', true).order('name'),
   ]);
 

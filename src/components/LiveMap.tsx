@@ -43,6 +43,7 @@ const STATUS_LABEL: Record<string, string> = {
 interface Layers {
   hoje: boolean;
   ativos: boolean;
+  espera: boolean;
   inativos: boolean;
   equipe: boolean;
 }
@@ -52,9 +53,9 @@ export default function LiveMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const groupsRef = useRef<Record<string, any>>({});
   const dataRef = useRef<any>(null);
-  const layersRef = useRef<Layers>({ hoje: true, ativos: true, inativos: false, equipe: true });
-  const [layers, setLayers] = useState<Layers>({ hoje: true, ativos: true, inativos: false, equipe: true });
-  const [counts, setCounts] = useState({ hoje: 0, ativos: 0, inativos: 0, equipe: 0 });
+  const layersRef = useRef<Layers>({ hoje: true, ativos: true, espera: true, inativos: false, equipe: true });
+  const [layers, setLayers] = useState<Layers>({ hoje: true, ativos: true, espera: true, inativos: false, equipe: true });
+  const [counts, setCounts] = useState({ hoje: 0, ativos: 0, espera: 0, inativos: 0, equipe: 0 });
   const [loading, setLoading] = useState(true);
   const [basemap, setBasemap] = useState<BasemapKey>('clean');
   const tileRef = useRef<any>(null);
@@ -82,29 +83,38 @@ export default function LiveMap() {
         .addTo(g.base);
     }
 
+    const CLIENT_STYLE: Record<string, { group: string; color: string; opacity: number; label: string }> = {
+      ativo: { group: 'ativos', color: '#2BB3A3', opacity: 0.9, label: 'Cliente ativo' },
+      em_espera: { group: 'espera', color: '#F2A03D', opacity: 0.9, label: 'Em espera (aguardando resposta)' },
+      inativo: { group: 'inativos', color: '#9AA8A6', opacity: 0.6, label: 'Cliente inativo' },
+    };
+
     for (const c of data.clients ?? []) {
       if (c.has_today && visible.hoje) continue;
-      const isAtivo = c.status === 'ativo';
-      if (isAtivo && !visible.ativos) continue;
-      if (!isAtivo && !visible.inativos) continue;
+      const st = CLIENT_STYLE[c.status];
+      if (!st) continue;
+      const on =
+        (st.group === 'ativos' && visible.ativos) ||
+        (st.group === 'espera' && visible.espera) ||
+        (st.group === 'inativos' && visible.inativos);
+      if (!on) continue;
       bounds.push([c.lat, c.lng]);
       L.circleMarker([c.lat, c.lng], {
         radius: 6,
         color: '#ffffff',
         weight: 1.5,
-        fillColor: isAtivo ? '#2BB3A3' : '#9AA8A6',
-        fillOpacity: isAtivo ? 0.9 : 0.6,
+        fillColor: st.color,
+        fillOpacity: st.opacity,
       })
         .bindTooltip(
-          c.name + (c.unit ? ' · ' + c.unit : '') + (isAtivo ? '' : ' (inativo)'),
+          c.name + (c.unit ? ' · ' + c.unit : '') + (c.status === 'ativo' ? '' : ' (' + st.label + ')'),
           { direction: 'top', offset: [0, -6] }
         )
         .bindPopup(
           '<strong>' + c.name + '</strong>' + (c.unit ? ' · ' + c.unit : '') + '<br/>' +
-          (isAtivo ? 'Cliente ativo' : 'Cliente inativo') +
-          (c.frequency ? ' · ' + c.frequency : '') + '<br/>' + (c.address ?? '')
+          st.label + (c.frequency ? ' · ' + c.frequency : '') + '<br/>' + (c.address ?? '')
         )
-        .addTo(isAtivo ? g.ativos : g.inativos);
+        .addTo(g[st.group]);
     }
 
     if (visible.hoje) {
@@ -181,7 +191,8 @@ export default function LiveMap() {
       setCounts({
         hoje: (data.houses ?? []).length,
         ativos: clients.filter((c: any) => c.status === 'ativo').length,
-        inativos: clients.filter((c: any) => c.status !== 'ativo').length,
+        espera: clients.filter((c: any) => c.status === 'em_espera').length,
+        inativos: clients.filter((c: any) => c.status === 'inativo').length,
         equipe: (data.people ?? []).length,
       });
       setLoading(false);
@@ -222,6 +233,7 @@ export default function LiveMap() {
       groupsRef.current = {
         base: L.layerGroup().addTo(mapRef.current),
         inativos: L.layerGroup().addTo(mapRef.current),
+        espera: L.layerGroup().addTo(mapRef.current),
         ativos: L.layerGroup().addTo(mapRef.current),
         hoje: L.layerGroup().addTo(mapRef.current),
         equipe: L.layerGroup().addTo(mapRef.current),
@@ -296,6 +308,7 @@ export default function LiveMap() {
       <div className="mb-3 flex flex-wrap gap-2">
         {chip('hoje', '🔵', 'Limpezas de hoje', counts.hoje)}
         {chip('ativos', '🟢', 'Clientes ativos', counts.ativos)}
+        {chip('espera', '🟡', 'Em espera', counts.espera)}
         {chip('inativos', '⚪', 'Clientes inativos', counts.inativos)}
         {chip('equipe', '🧍', 'Equipe agora', counts.equipe)}
       </div>
@@ -306,7 +319,7 @@ export default function LiveMap() {
 
       <p className="mt-2 text-sm text-brand-800">
         🏢 sede · círculos grandes = limpezas de hoje na <strong>cor da equipe</strong> responsável
-        (mais claras quando concluídas) · pontos verdes = clientes ativos · cinzas = inativos ·
+        (mais claras quando concluídas) · pontos verdes = clientes ativos · amarelos = em espera · cinzas = inativos ·
         marcadores com iniciais = pessoas da equipe nos últimos 15 minutos. Atualiza a cada 60s;
         Passe o mouse sobre um ponto para ver o cliente; toque ou clique para os detalhes.
         Use as etiquetas para ligar e desligar camadas.

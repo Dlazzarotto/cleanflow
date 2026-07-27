@@ -99,7 +99,18 @@ export async function updateEstimateStatusAction(id: string, status: string) {
   const { supabase } = await getCompanyId();
   const { error } = await supabase.from('estimates').update({ status }).eq('id', id);
   if (error) throw new Error(error.message);
+
+  // Espelha no cliente: enviado -> em espera; recusado -> inativo
+  const { data: est } = await supabase.from('estimates').select('client_id').eq('id', id).single();
+  if (est?.client_id) {
+    if (status === 'enviado') {
+      await supabase.from('clients').update({ status: 'em_espera' }).eq('id', est.client_id).neq('status', 'ativo');
+    } else if (status === 'recusado') {
+      await supabase.from('clients').update({ status: 'inativo' }).eq('id', est.client_id).eq('status', 'em_espera');
+    }
+  }
   revalidatePath('/estimates');
+  revalidatePath('/clientes');
 }
 
 /** Aprova o estimate definindo o preco fechado (usado no contrato). */
@@ -112,7 +123,14 @@ export async function approveEstimateAction(formData: FormData) {
     .update({ status: 'aprovado', final_price: finalPrice > 0 ? finalPrice : null })
     .eq('id', id);
   if (error) throw new Error(error.message);
+
+  // Estimate aprovado: o cliente vira ativo
+  const { data: est } = await supabase.from('estimates').select('client_id').eq('id', id).single();
+  if (est?.client_id) {
+    await supabase.from('clients').update({ status: 'ativo' }).eq('id', est.client_id);
+  }
   revalidatePath('/estimates');
+  revalidatePath('/clientes');
 }
 
 
@@ -140,6 +158,7 @@ export async function convertEstimateToClientAction(id: string) {
       lng: e.lng,
       frequency: e.frequency || null,
       language: e.language || 'pt',
+      status: 'em_espera',
     })
     .select('id')
     .single();

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { requireManager } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { STATUS_LABEL, type Booking, type Client } from '@/lib/types';
+import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
         <h1 className="text-3xl font-bold text-brand-900">{c.full_name}</h1>
         <Link href={`/clientes/${c.id}/editar`} className="btn-ghost">✏️ Editar</Link>
       </div>
-      <p className="mb-6 text-brand-800 capitalize">Status: {c.status}</p>
+      <p className="mb-6 text-brand-800">Status: {CLIENT_STATUS_LABEL[c.status] ?? c.status}</p>
 
       <div className="card mb-6">
         <h2 className="mb-3 text-xl font-semibold text-brand-900">Ficha do cliente</h2>

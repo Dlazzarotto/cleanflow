@@ -12,7 +12,7 @@ export default async function NovoEstimatePage() {
     supabase
       .from('clients')
       .select('id, full_name, address, lat, lng, language')
-      .eq('status', 'ativo')
+      .neq('status', 'deletado')
       .order('full_name'),
     getPricingSettings(),
   ]);

@@ -49,7 +49,8 @@ export async function GET() {
       supabase
         .from('clients')
         .select('id, full_name, address, unit, status, frequency, lat, lng')
-        .not('lat', 'is', null),
+        .not('lat', 'is', null)
+        .neq('status', 'deletado'),
     ]);
 
   const nameByUser = new Map((members ?? []).map((m: any) => [m.user_id, m.full_name]));
