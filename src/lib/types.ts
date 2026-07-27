@@ -57,6 +57,7 @@ export interface Client {
   source: string | null;
   marketing_opt_in: boolean;
   lost_reason: string | null;
+  last_contact_at: string | null;
   created_at: string;
 }
 
