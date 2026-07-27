@@ -10,7 +10,8 @@ const TABS: { key: ClientStatus; label: string; icon: string }[] = [
   { key: 'lead', label: 'Leads', icon: '🌱' },
   { key: 'ativo', label: 'Ativos', icon: '🟢' },
   { key: 'em_espera', label: 'Em espera', icon: '🟡' },
-  { key: 'inativo', label: 'Inativos', icon: '⚪' },
+  { key: 'inativo', label: 'Ex-clientes', icon: '⚪' },
+  { key: 'perdido', label: 'Não fecharam', icon: '💤' },
   { key: 'deletado', label: 'Deletados', icon: '🗑️' },
 ];
 
@@ -75,7 +76,11 @@ export default async function ClientesPage({
             ? 'Nenhum cliente ativo ainda. Cadastre o primeiro para começar a agendar limpezas.'
             : active === 'em_espera'
               ? 'Nenhum cliente aguardando resposta. Clientes entram aqui automaticamente quando um estimate é enviado a eles.'
-              : `Nenhum cliente com status "${CLIENT_STATUS_LABEL[active]}".`}
+              : active === 'inativo'
+              ? 'Nenhum ex-cliente. Aqui ficam os que já foram atendidos e pararam — base de reconquista.'
+              : active === 'perdido'
+                ? 'Ninguém aqui. Este grupo reúne quem recebeu orçamento e não fechou.'
+                : `Nenhum cliente com status "${CLIENT_STATUS_LABEL[active]}".`}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

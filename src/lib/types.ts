@@ -23,13 +23,14 @@ export interface Profile {
   phone: string | null;
 }
 
-export type ClientStatus = 'lead' | 'ativo' | 'em_espera' | 'inativo' | 'deletado';
+export type ClientStatus = 'lead' | 'ativo' | 'em_espera' | 'inativo' | 'perdido' | 'deletado';
 
 export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
   lead: 'Lead',
   ativo: 'Ativo',
   em_espera: 'Em espera',
-  inativo: 'Inativo',
+  inativo: 'Ex-cliente',
+  perdido: 'Não fechou',
   deletado: 'Deletado',
 };
 

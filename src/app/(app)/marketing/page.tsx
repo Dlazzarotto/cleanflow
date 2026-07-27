@@ -23,10 +23,17 @@ const GRUPOS: { key: string; label: string; icon: string; statuses: ClientStatus
   },
   {
     key: 'perdidos',
-    label: 'Não fecharam / inativos',
+    label: 'Não fecharam',
     icon: '💤',
+    statuses: ['perdido'],
+    hint: 'Receberam orçamento e nunca contrataram. A conversa aqui é vencer a objeção original — preço, frequência ou momento. Veja o motivo registrado em cada um.',
+  },
+  {
+    key: 'exclientes',
+    label: 'Ex-clientes',
+    icon: '🔄',
     statuses: ['inativo'],
-    hint: 'Base fria para campanhas sazonais (fim de ano, mudança, primavera).',
+    hint: 'Já foram atendidos e pararam. A melhor base que existe: conhecem o serviço e a casa já está no sistema. Campanha de reconquista costuma converter mais que lead novo.',
   },
 ];
 

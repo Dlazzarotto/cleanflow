@@ -100,7 +100,8 @@ export default async function EditarClientePage({ params }: { params: { id: stri
             <option value="lead">Lead</option>
             <option value="ativo">Ativo</option>
             <option value="em_espera">Em espera (estimate enviado, aguardando resposta)</option>
-            <option value="inativo">Inativo</option>
+            <option value="inativo">Ex-cliente (já foi atendido e parou)</option>
+            <option value="perdido">Não fechou (recebeu orçamento e não virou cliente)</option>
           </select>
           <p className="mt-1 text-sm text-brand-800">
             Para banir um cliente (deletado), use o botão 🚫 na ficha do cliente — exige motivo e

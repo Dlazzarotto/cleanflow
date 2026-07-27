@@ -107,7 +107,18 @@ export async function updateEstimateStatusAction(id: string, status: string) {
     if (status === 'enviado') {
       await supabase.from('clients').update({ status: 'em_espera' }).eq('id', est.client_id).neq('status', 'ativo');
     } else if (status === 'recusado') {
-      await supabase.from('clients').update({ status: 'inativo' }).eq('id', est.client_id).eq('status', 'em_espera');
+      // Nunca teve limpeza concluida => nao fechou (perdido); ja foi cliente => ex-cliente
+      const { count } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', est.client_id)
+        .eq('status', 'concluido');
+      const novoStatus = (count ?? 0) > 0 ? 'inativo' : 'perdido';
+      await supabase
+        .from('clients')
+        .update({ status: novoStatus })
+        .eq('id', est.client_id)
+        .in('status', ['em_espera', 'lead']);
     }
   }
   revalidatePath('/estimates');
