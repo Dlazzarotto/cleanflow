@@ -17,9 +17,9 @@ const MANAGER_NAV = [
 ];
 
 const MARKETING_NAV = [
-  { href: '/marketing', label: 'Marketing', icon: '📣' },
+  { href: '/marketing', label: 'Meus leads', icon: '🌱' },
+  { href: '/clientes/novo', label: 'Cadastrar lead', icon: '➕' },
   { href: '/marketing/relatorio', label: 'Relatório', icon: '📊' },
-  { href: '/clientes', label: 'Clientes', icon: '👤' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];
 

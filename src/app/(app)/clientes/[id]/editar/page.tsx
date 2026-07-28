@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { requireMarketingAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { updateClientAction } from '@/lib/actions';
@@ -8,10 +9,11 @@ import type { Client } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function EditarClientePage({ params }: { params: { id: string } }) {
-  const { role: myRole } = await requireMarketingAccess();
+  const { role: myRole, userId: myId } = await requireMarketingAccess();
   const supabase = createClient();
   const { data } = await supabase.from('clients').select('*').eq('id', params.id).single();
   if (!data) notFound();
+  if (myRole === 'marketing' && (data as any).created_by !== myId) redirect('/marketing');
   const c = data as Client;
 
   return (

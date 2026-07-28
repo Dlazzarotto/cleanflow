@@ -29,6 +29,13 @@ const GRUPOS: { key: string; label: string; icon: string; statuses: ClientStatus
     hint: 'Receberam orçamento e nunca contrataram. A conversa aqui é vencer a objeção original — preço, frequência ou momento. Veja o motivo registrado em cada um.',
   },
   {
+    key: 'fechados',
+    label: 'Viraram clientes',
+    icon: '🟢',
+    statuses: ['ativo'],
+    hint: 'Fecharam contrato. O resultado do trabalho de prospecção.',
+  },
+  {
     key: 'exclientes',
     label: 'Ex-clientes',
     icon: '🔄',
@@ -62,15 +69,18 @@ export default async function MarketingPage({
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-brand-900">📣 Marketing</h1>
+        <h1 className="text-3xl font-bold text-brand-900">
+          {myRole === 'marketing' ? '🌱 Meus leads' : '📣 Marketing'}
+        </h1>
         <div className="flex gap-2">
-          <Link href="/clientes/novo" className="btn-primary">+ Novo lead</Link>
+          <Link href="/clientes/novo" className="btn-primary">+ Cadastrar lead</Link>
           <Link href="/marketing/relatorio" className="btn-ghost">📊 Relatório</Link>
         </div>
       </div>
       <p className="mb-6 text-brand-800">
-        Quem não virou cliente recorrente continua aqui — com o histórico do que aconteceu — para
-        campanhas futuras. Clientes banidos nunca entram nesta base.
+        {myRole === 'marketing'
+          ? 'Aqui ficam os leads que você cadastrou e o andamento de cada um. Quem define o destino (fechou, não aceitou, segue em espera) é a gestão — você acompanha e faz o follow-up.'
+          : 'Quem não virou cliente recorrente continua aqui — com o histórico do que aconteceu — para campanhas futuras. Clientes banidos nunca entram nesta base.'}
       </p>
 
       <div className="mb-6 flex flex-wrap gap-2">

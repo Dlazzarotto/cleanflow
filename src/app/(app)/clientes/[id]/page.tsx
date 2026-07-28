@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { requireMarketingAccess } from '@/lib/auth';
 import BanClientForm from '@/components/BanClientForm';
 import { unbanClientAction } from '@/lib/actions';
@@ -9,7 +10,7 @@ import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/
 export const dynamic = 'force-dynamic';
 
 export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
-  const { role: myRole } = await requireMarketingAccess();
+  const { role: myRole, userId: myId } = await requireMarketingAccess();
   const isOwner = myRole === 'owner';
   const isMkt = myRole === 'marketing';
   const supabase = createClient();
@@ -23,6 +24,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
       .limit(20),
   ]);
   if (!client) notFound();
+  if (myRole === 'marketing' && (client as any).created_by !== myId) redirect('/marketing');
   const c = client as Client;
   const history = (bookings ?? []) as Booking[];
 

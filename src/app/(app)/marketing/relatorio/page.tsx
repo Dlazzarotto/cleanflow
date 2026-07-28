@@ -104,7 +104,9 @@ export default async function RelatorioMarketingPage({
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-brand-900">📊 Relatório de marketing</h1>
+        <h1 className="text-3xl font-bold text-brand-900">
+          {verValores ? '📊 Relatório de marketing' : '📊 Meu relatório'}
+        </h1>
         <div className="flex gap-2">
           {[30, 90, 365].map((d) => (
             <Link
@@ -117,6 +119,12 @@ export default async function RelatorioMarketingPage({
           ))}
         </div>
       </div>
+
+      {!verValores && (
+        <p className="mb-6 text-brand-800">
+          Números dos leads que você cadastrou.
+        </p>
+      )}
 
       {/* Funil */}
       <h2 className="mb-3 text-xl font-semibold text-brand-900">Funil do período</h2>
