@@ -1,9 +1,9 @@
 import AddressAutocomplete from '@/components/AddressAutocomplete';
-import { requireManager } from '@/lib/auth';
+import { requireMarketingAccess } from '@/lib/auth';
 import { createClientAction } from '@/lib/actions';
 
 export default async function NovoClientePage() {
-  await requireManager();
+  const { role: myRole } = await requireMarketingAccess();
   return (
     <div className="max-w-2xl">
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Novo cliente</h1>
@@ -58,10 +58,17 @@ export default async function NovoClientePage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="label" htmlFor="status">Situação</label>
-            <select className="input" id="status" name="status" defaultValue="lead">
-              <option value="lead">🌱 Lead (ainda vai receber orçamento)</option>
-              <option value="ativo">🟢 Cliente ativo</option>
-            </select>
+            {myRole === 'marketing' ? (
+              <>
+                <input type="hidden" name="status" value="lead" />
+                <p className="input flex items-center !bg-brand-50">🌱 Lead</p>
+              </>
+            ) : (
+              <select className="input" id="status" name="status" defaultValue="lead">
+                <option value="lead">🌱 Lead (ainda vai receber orçamento)</option>
+                <option value="ativo">🟢 Cliente ativo</option>
+              </select>
+            )}
           </div>
           <div>
             <label className="label" htmlFor="source">Origem</label>

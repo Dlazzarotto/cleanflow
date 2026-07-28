@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { requireManager } from '@/lib/auth';
+import { requireMarketingAccess } from '@/lib/auth';
+import BanClientForm from '@/components/BanClientForm';
+import { unbanClientAction } from '@/lib/actions';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/lib/types';
@@ -7,7 +9,9 @@ import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/
 export const dynamic = 'force-dynamic';
 
 export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
-  await requireManager();
+  const { role: myRole } = await requireMarketingAccess();
+  const isOwner = myRole === 'owner';
+  const isMkt = myRole === 'marketing';
   const supabase = createClient();
   const [{ data: client }, { data: bookings }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', params.id).single(),
@@ -26,8 +30,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
     ['Telefone', c.phone],
     ['Email', c.email],
     ['Endereço', c.address],
-    ['Código da porta', c.door_code],
-    ['Alarme', c.alarm_notes],
+    ...(isMkt ? [] : ([['Código da porta', c.door_code], ['Alarme', c.alarm_notes]] as Array<[string, string | null]>)),
     ['Pets', c.has_pets ? (c.pets_notes ?? 'Sim') : 'Não'],
     ['Produtos', c.products_notes],
     ['Frequência', c.frequency],
@@ -39,7 +42,24 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
         <h1 className="text-3xl font-bold text-brand-900">{c.full_name}</h1>
         <Link href={`/clientes/${c.id}/editar`} className="btn-ghost">✏️ Editar</Link>
       </div>
-      <p className="mb-6 text-brand-800">Status: {CLIENT_STATUS_LABEL[c.status] ?? c.status}</p>
+      <p className="mb-4 text-brand-800">Status: {CLIENT_STATUS_LABEL[c.status] ?? c.status}</p>
+
+      {c.status === 'deletado' && (
+        <div className="card mb-6 border-red-700 bg-red-50">
+          <p className="font-bold text-red-800">🚫 Cliente banido</p>
+          <p className="mt-1 text-brand-900">{(c as any).ban_reason}</p>
+          {(c as any).banned_at && (
+            <p className="mt-1 text-sm text-brand-800">
+              Registrado em {new Date((c as any).banned_at).toLocaleDateString('pt-BR')}
+            </p>
+          )}
+          {isOwner && (
+            <form action={unbanClientAction.bind(null, c.id)} className="mt-3">
+              <button className="btn-ghost" type="submit">Reverter banimento (voltar para inativo)</button>
+            </form>
+          )}
+        </div>
+      )}
 
       <div className="card mb-6">
         <h2 className="mb-3 text-xl font-semibold text-brand-900">Ficha do cliente</h2>
@@ -58,6 +78,12 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
           </div>
         )}
       </div>
+
+      {isOwner && c.status !== 'deletado' && (
+        <div className="mb-6">
+          <BanClientForm clientId={c.id} clientName={c.full_name} />
+        </div>
+      )}
 
       <h2 className="mb-3 text-xl font-semibold text-brand-900">Histórico de limpezas</h2>
       {history.length === 0 ? (

@@ -5,7 +5,7 @@ export interface AuthContext {
   supabase: ReturnType<typeof createClient>;
   userId: string;
   companyId: string;
-  role: 'owner' | 'admin' | 'supervisor' | 'cleaner';
+  role: 'owner' | 'admin' | 'supervisor' | 'cleaner' | 'marketing';
   fullName: string;
 }
 
@@ -40,6 +40,17 @@ export async function getAuth(): Promise<AuthContext> {
 
 export function isManager(role: string) {
   return role === 'owner' || role === 'admin' || role === 'supervisor';
+}
+
+export function isMarketing(role: string) {
+  return role === 'marketing';
+}
+
+/** Telas do funil comercial: gestão + time de marketing. */
+export async function requireMarketingAccess(): Promise<AuthContext> {
+  const ctx = await getAuth();
+  if (!isManager(ctx.role) && !isMarketing(ctx.role)) redirect('/minha-agenda');
+  return ctx;
 }
 
 

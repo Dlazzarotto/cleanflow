@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { requireManager } from '@/lib/auth';
+import { requireMarketingAccess } from '@/lib/auth';
 import { CLIENT_STATUS_LABEL, type Client, type ClientStatus } from '@/lib/types';
 import { setMarketingOptInAction, saveLostReasonAction, markContactedAction } from '@/lib/actions';
 
@@ -42,7 +42,7 @@ export default async function MarketingPage({
 }: {
   searchParams: { grupo?: string };
 }) {
-  await requireManager();
+  const { role: myRole } = await requireMarketingAccess();
   const grupo = GRUPOS.find((g) => g.key === searchParams.grupo) ?? GRUPOS[0];
 
   const supabase = createClient();
@@ -61,7 +61,13 @@ export default async function MarketingPage({
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold text-brand-900">📣 Marketing</h1>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold text-brand-900">📣 Marketing</h1>
+        <div className="flex gap-2">
+          <Link href="/clientes/novo" className="btn-primary">+ Novo lead</Link>
+          <Link href="/marketing/relatorio" className="btn-ghost">📊 Relatório</Link>
+        </div>
+      </div>
       <p className="mb-6 text-brand-800">
         Quem não virou cliente recorrente continua aqui — com o histórico do que aconteceu — para
         campanhas futuras. Clientes banidos nunca entram nesta base.

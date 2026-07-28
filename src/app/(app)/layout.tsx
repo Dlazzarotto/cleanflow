@@ -16,6 +16,13 @@ const MANAGER_NAV = [
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];
 
+const MARKETING_NAV = [
+  { href: '/marketing', label: 'Marketing', icon: '📣' },
+  { href: '/marketing/relatorio', label: 'Relatório', icon: '📊' },
+  { href: '/clientes', label: 'Clientes', icon: '👤' },
+  { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
+];
+
 const CLEANER_NAV = [
   { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
@@ -40,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const companyName = (membership as any)?.companies?.name ?? 'Sua empresa';
   const role = (membership as any)?.role ?? 'cleaner';
-  const nav = role === 'cleaner' ? CLEANER_NAV : MANAGER_NAV;
+  const nav = role === 'cleaner' ? CLEANER_NAV : role === 'marketing' ? MARKETING_NAV : MANAGER_NAV;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">

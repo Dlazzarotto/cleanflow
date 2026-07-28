@@ -22,6 +22,7 @@ const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin',
   supervisor: 'Supervisor(a)',
   cleaner: 'Equipe',
+  marketing: 'Marketing',
 };
 
 export default async function EquipesPage() {

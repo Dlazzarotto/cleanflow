@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { requireManager } from '@/lib/auth';
+import { requireMarketingAccess } from '@/lib/auth';
 import { CLIENT_STATUS_LABEL, type Client, type ClientStatus } from '@/lib/types';
 import GeocodeBatch from '@/components/GeocodeBatch';
 
@@ -20,7 +20,7 @@ export default async function ClientesPage({
 }: {
   searchParams: { status?: string };
 }) {
-  await requireManager();
+  const { role: myRole } = await requireMarketingAccess();
   const active: ClientStatus = (TABS.some((t) => t.key === searchParams.status)
     ? searchParams.status
     : 'ativo') as ClientStatus;
@@ -48,7 +48,9 @@ export default async function ClientesPage({
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Clientes</h1>
-        <Link href="/clientes/novo" className="btn-primary">+ Novo cliente</Link>
+        <Link href="/clientes/novo" className="btn-primary">
+          {myRole === 'marketing' ? '+ Novo lead' : '+ Novo cliente'}
+        </Link>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">

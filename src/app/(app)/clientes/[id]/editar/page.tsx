@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { requireManager } from '@/lib/auth';
+import { requireMarketingAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { updateClientAction } from '@/lib/actions';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
@@ -8,7 +8,7 @@ import type { Client } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function EditarClientePage({ params }: { params: { id: string } }) {
-  await requireManager();
+  const { role: myRole } = await requireMarketingAccess();
   const supabase = createClient();
   const { data } = await supabase.from('clients').select('*').eq('id', params.id).single();
   if (!data) notFound();
@@ -94,6 +94,9 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           <label className="label" htmlFor="products_notes">Produtos</label>
           <input className="input" id="products_notes" name="products_notes" defaultValue={c.products_notes ?? ''} />
         </div>
+        {myRole === 'marketing' ? (
+          <input type="hidden" name="status" value={c.status} />
+        ) : (
         <div>
           <label className="label" htmlFor="status">Status</label>
           <select className="input" id="status" name="status" defaultValue={c.status}>
@@ -108,6 +111,7 @@ export default async function EditarClientePage({ params }: { params: { id: stri
             confirmação de senha, e é restrito ao dono da empresa.
           </p>
         </div>
+        )}
         <button className="btn-primary w-full" type="submit">Salvar alterações</button>
       </form>
     </div>

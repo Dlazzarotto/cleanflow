@@ -70,6 +70,7 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
           <label className="label" htmlFor="inv-role">Papel</label>
           <select className="input" id="inv-role" value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="cleaner">Equipe de limpeza</option>
+            <option value="marketing">Equipe de marketing</option>
             <option value="supervisor">Supervisor(a)</option>
             <option value="admin">Administrador(a)</option>
           </select>

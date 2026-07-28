@@ -38,7 +38,9 @@ export async function POST(request: Request) {
 
   const email = (body.email ?? '').trim().toLowerCase();
   const fullName = (body.full_name ?? '').trim();
-  const role = ['admin', 'supervisor', 'cleaner'].includes(body.role ?? '') ? body.role! : 'cleaner';
+  const role = ['admin', 'supervisor', 'cleaner', 'marketing'].includes(body.role ?? '')
+    ? body.role!
+    : 'cleaner';
   if (!email || !fullName) {
     return NextResponse.json({ error: 'Email e nome são obrigatórios.' }, { status: 400 });
   }
