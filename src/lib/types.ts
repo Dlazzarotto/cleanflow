@@ -55,6 +55,7 @@ export interface Client {
   ban_reason: string | null;
   banned_at: string | null;
   source: string | null;
+  entry_source: 'marketing' | 'organico' | 'importado';
   marketing_opt_in: boolean;
   lost_reason: string | null;
   last_contact_at: string | null;

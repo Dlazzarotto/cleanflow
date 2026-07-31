@@ -64,9 +64,9 @@ export default async function NovoClientePage() {
                 <p className="input flex items-center !bg-brand-50">🌱 Lead</p>
               </>
             ) : (
-              <select className="input" id="status" name="status" defaultValue="lead">
-                <option value="lead">🌱 Lead (ainda vai receber orçamento)</option>
+              <select className="input" id="status" name="status" defaultValue="ativo">
                 <option value="ativo">🟢 Cliente ativo</option>
+                <option value="lead">🌱 Lead (ainda vai receber orçamento)</option>
               </select>
             )}
           </div>
@@ -75,6 +75,18 @@ export default async function NovoClientePage() {
             <input className="input" id="source" name="source" placeholder="Ex: indicação, Google, Instagram" />
           </div>
         </div>
+        {myRole !== 'marketing' && (
+          <label className="flex min-h-touch cursor-pointer items-center gap-3 rounded-card bg-brand-50 px-4">
+            <input type="checkbox" name="from_marketing" className="h-5 w-5 accent-brand-700" />
+            <span>
+              Este cliente veio de uma ação do marketing
+              <span className="block text-sm text-brand-800">
+                Marque apenas se foi prospecção/campanha. Indicações e contatos diretos ficam como
+                orgânicos e não entram no funil do marketing.
+              </span>
+            </span>
+          </label>
+        )}
         <div className="flex items-center gap-3">
           <input type="checkbox" id="has_pets" name="has_pets" className="h-6 w-6 accent-brand-700" />
           <label htmlFor="has_pets" className="font-medium text-brand-800">Tem pets</label>

@@ -28,7 +28,8 @@ export default async function RelatorioMarketingPage({
   const [{ data: clientRows }, { data: estimateRows }] = await Promise.all([
     supabase
       .from('clients')
-      .select('id, full_name, status, source, lost_reason, marketing_opt_in, last_contact_at, created_at'),
+      .select('id, full_name, status, source, entry_source, lost_reason, marketing_opt_in, last_contact_at, created_at')
+      .eq('entry_source', 'marketing'),
     supabase
       .from('estimates')
       .select('id, client_id, status, final_price, price_low, created_at')
@@ -36,7 +37,8 @@ export default async function RelatorioMarketingPage({
   ]);
 
   const clients = clientRows ?? [];
-  const estimates = estimateRows ?? [];
+  const marketingIds = new Set(clients.map((c: any) => c.id));
+  const estimates = (estimateRows ?? []).filter((e: any) => marketingIds.has(e.client_id));
   const novos = clients.filter((c: any) => c.created_at >= desde);
 
   // ---- Funil do período ----
@@ -120,11 +122,11 @@ export default async function RelatorioMarketingPage({
         </div>
       </div>
 
-      {!verValores && (
-        <p className="mb-6 text-brand-800">
-          Números dos leads que você cadastrou.
-        </p>
-      )}
+      <p className="mb-6 text-brand-800">
+        {verValores
+          ? 'Considera apenas clientes originados por prospecção e campanhas do marketing. A base antiga importada e os clientes que chegaram por indicação não entram nestes números.'
+          : 'Números dos leads que você cadastrou.'}
+      </p>
 
       {/* Funil */}
       <h2 className="mb-3 text-xl font-semibold text-brand-900">Funil do período</h2>
@@ -170,7 +172,7 @@ export default async function RelatorioMarketingPage({
       )}
 
       {/* Carteira */}
-      <h2 className="mb-3 text-xl font-semibold text-brand-900">Situação da carteira hoje</h2>
+      <h2 className="mb-3 text-xl font-semibold text-brand-900">Situação dos leads do marketing</h2>
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
         {[
           ['🌱 Leads', 'lead'],

@@ -47,22 +47,29 @@ const GRUPOS: { key: string; label: string; icon: string; statuses: ClientStatus
 export default async function MarketingPage({
   searchParams,
 }: {
-  searchParams: { grupo?: string };
+  searchParams: { grupo?: string; base?: string };
 }) {
   const { role: myRole } = await requireMarketingAccess();
   const grupo = GRUPOS.find((g) => g.key === searchParams.grupo) ?? GRUPOS[0];
 
+  const todaBase = searchParams.base === 'todos' && myRole !== 'marketing';
+
   const supabase = createClient();
-  const { data } = await supabase
+  let query = supabase
     .from('clients')
     .select('*')
     .in('status', grupo.statuses)
     .order('created_at', { ascending: false });
+  if (!todaBase) query = query.eq('entry_source', 'marketing');
+  const { data } = await query;
   const clients = (data ?? []) as Client[];
 
-  const { data: counts } = await supabase.from('clients').select('status');
+  let countQuery = supabase.from('clients').select('status, entry_source');
+  const { data: counts } = await countQuery;
   const countBy = (sts: ClientStatus[]) =>
-    (counts ?? []).filter((c: any) => sts.includes(c.status)).length;
+    (counts ?? []).filter(
+      (c: any) => sts.includes(c.status) && (todaBase || c.entry_source === 'marketing')
+    ).length;
 
   const contatos = clients.filter((c) => c.marketing_opt_in && (c.phone || c.email));
 
@@ -80,14 +87,34 @@ export default async function MarketingPage({
       <p className="mb-6 text-brand-800">
         {myRole === 'marketing'
           ? 'Aqui ficam os leads que você cadastrou e o andamento de cada um. Quem define o destino (fechou, não aceitou, segue em espera) é a gestão — você acompanha e faz o follow-up.'
-          : 'Quem não virou cliente recorrente continua aqui — com o histórico do que aconteceu — para campanhas futuras. Clientes banidos nunca entram nesta base.'}
+          : todaBase
+            ? 'Toda a base da empresa, para campanhas de reconquista e sazonais. Clientes banidos nunca entram aqui.'
+            : 'Apenas os clientes originados por prospecção e campanhas do marketing. A base antiga e os clientes que chegaram por indicação ficam em "Toda a base".'}
       </p>
+
+      {myRole !== 'marketing' && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-brand-800">Mostrar:</span>
+          <Link
+            href={`/marketing?grupo=${grupo.key}`}
+            className={!todaBase ? 'btn-primary' : 'btn-ghost'}
+          >
+            📣 Originados pelo marketing
+          </Link>
+          <Link
+            href={`/marketing?grupo=${grupo.key}&base=todos`}
+            className={todaBase ? 'btn-primary' : 'btn-ghost'}
+          >
+            👥 Toda a base (campanhas)
+          </Link>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-2">
         {GRUPOS.map((g) => (
           <Link
             key={g.key}
-            href={`/marketing?grupo=${g.key}`}
+            href={`/marketing?grupo=${g.key}${todaBase ? '&base=todos' : ''}`}
             className={`flex min-h-touch items-center gap-2 rounded-card border px-4 py-2 font-medium ${
               grupo.key === g.key
                 ? 'border-brand-700 bg-brand-900 text-white'
