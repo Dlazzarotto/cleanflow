@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const { start: startOfDay, end: endOfDay } = etTodayRange();
   const startOfMonth = etMonthStart();
 
-  const [todayRes, monthRes, clientsRes, shiftsRes] = await Promise.all([
+  const [todayRes, monthRes, clientsRes, shiftsRes, openInvoicesRes] = await Promise.all([
     supabase
       .from('bookings')
       .select('*, clients(full_name, address), teams(name, color)')
@@ -29,8 +29,10 @@ export default async function DashboardPage() {
       .select('person_name, started_at, ended_at')
       .gte('started_at', startOfDay)
       .order('started_at'),
+    supabase.from('invoices').select('amount, status').in('status', ['aberta', 'vencida']),
   ]);
   const shifts = shiftsRes.data ?? [];
+  const aReceber = (openInvoicesRes.data ?? []).reduce((s: number, i: any) => s + Number(i.amount), 0);
 
   const todayBookings = (todayRes.data ?? []) as Booking[];
   const monthBookings = monthRes.data ?? [];
@@ -60,6 +62,12 @@ export default async function DashboardPage() {
         <div className="card">
           <p className="text-brand-800">Clientes ativos</p>
           <p className="text-3xl font-bold">{clientsRes.count ?? 0}</p>
+        </div>
+        <div className="card">
+          <p className="text-brand-800">A receber</p>
+          <p className="text-3xl font-bold text-sun">
+            {aReceber.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+          </p>
         </div>
         <div className="card">
           <p className="text-brand-800">Cancelamentos no mês</p>

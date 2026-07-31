@@ -407,6 +407,7 @@ export async function updateCompanyAction(formData: FormData) {
       phone: String(formData.get('phone') ?? '') || null,
       email: String(formData.get('email') ?? '') || null,
       address: String(formData.get('address') ?? '') || null,
+      payment_instructions: String(formData.get('payment_instructions') ?? '') || null,
       ...(formData.get('lat') ? { lat: Number(formData.get('lat')) } : {}),
       ...(formData.get('lng') ? { lng: Number(formData.get('lng')) } : {}),
     })

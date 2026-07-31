@@ -22,7 +22,7 @@ export default async function ConfiguracoesPage() {
   const [{ data: settings }, { data: company }, { data: authUser }] = await Promise.all([
     supabase.from('user_settings').select('locale').eq('user_id', userId).single(),
     manager
-      ? supabase.from('companies').select('name, phone, email, address, lat, lng, plan, extra_teams, monthly_fee, account_status, next_due_date').eq('id', companyId).single()
+      ? supabase.from('companies').select('name, phone, email, address, lat, lng, plan, extra_teams, monthly_fee, account_status, next_due_date, payment_instructions').eq('id', companyId).single()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
   ]);
@@ -115,6 +115,19 @@ export default async function ConfiguracoesPage() {
                 <label className="label" htmlFor="company-email">Email</label>
                 <input className="input" id="company-email" name="email" type="email" defaultValue={(company as any).email ?? ''} />
               </div>
+            </div>
+            <div>
+              <label className="label" htmlFor="payment_instructions">
+                Instruções de pagamento (aparecem na fatura do cliente)
+              </label>
+              <textarea
+                className="input"
+                id="payment_instructions"
+                name="payment_instructions"
+                rows={4}
+                defaultValue={(company as any).payment_instructions ?? ''}
+                placeholder={'Ex:\nZelle: 617-555-0100 (Wait Happy Cleaning)\nVenmo: @waithappy\nCheque nominal a Wait Happy Cleaning Services Inc'}
+              />
             </div>
             <div>
               <label className="label" htmlFor="company-address">Endereço da sede</label>

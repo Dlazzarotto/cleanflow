@@ -52,6 +52,20 @@ export default function CheckinButton({
 
     try {
       await updateMyBookingStatusAction(bookingId, to, pos?.lat ?? null, pos?.lng ?? null);
+
+      // Check-out: a fatura nasce no banco; dispara o email ao cliente
+      if (to === 'concluido') {
+        try {
+          await fetch('/api/faturas/enviar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: bookingId }),
+          });
+        } catch {
+          // sem rede: a gestao envia depois pela tela de Faturas
+        }
+      }
+
       router.refresh();
     } catch (e) {
       setError(
