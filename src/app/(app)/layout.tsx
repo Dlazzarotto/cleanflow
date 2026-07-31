@@ -20,7 +20,7 @@ const MANAGER_NAV = [
 
 const MARKETING_NAV = [
   { href: '/marketing', label: 'Meus leads', icon: '🌱' },
-  { href: '/clientes/novo', label: 'Cadastrar lead', icon: '➕' },
+  { href: '/marketing/novo', label: 'Cadastrar lead', icon: '➕' },
   { href: '/marketing/relatorio', label: 'Relatório', icon: '📊' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ];

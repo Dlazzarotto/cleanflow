@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuth } from '@/lib/auth';
 import { STATUS_LABEL, type BookingStatus } from '@/lib/types';
 import CheckinButton from '@/components/CheckinButton';
 import ArrivalWatcher from '@/components/ArrivalWatcher';
@@ -48,6 +49,10 @@ export default async function MinhaAgendaPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  // Time de marketing nao trabalha em campo
+  const { role } = await getAuth();
+  if (role === 'marketing') redirect('/marketing');
 
   const start = new Date();
   start.setHours(0, 0, 0, 0);

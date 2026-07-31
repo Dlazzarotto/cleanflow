@@ -64,7 +64,18 @@ export default async function EquipesPage() {
           <p className="text-brand-800">Nenhuma pessoa ainda.</p>
         ) : (
           <div className="space-y-2">
-            {memberList.map((m: any) => (
+            {[
+              { titulo: '🏢 Gestão', roles: ['owner', 'admin', 'supervisor'] },
+              { titulo: '🧹 Equipe de limpeza (campo)', roles: ['cleaner'] },
+              { titulo: '📣 Marketing (sem trabalho de campo)', roles: ['marketing'] },
+            ].map((grupo) => {
+              const pessoas = memberList.filter((m: any) => grupo.roles.includes(m.role));
+              if (pessoas.length === 0) return null;
+              return (
+                <div key={grupo.titulo} className="pt-2">
+                  <p className="mb-2 font-semibold text-brand-800">{grupo.titulo}</p>
+                  <div className="space-y-2">
+                    {pessoas.map((m: any) => (
               <div key={m.id} className="rounded-card border border-brand-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -95,7 +106,11 @@ export default async function EquipesPage() {
                   <ResetAccessButton membershipId={m.id} personName={m.full_name} />
                 </div>
               </div>
-            ))}
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -80,7 +80,7 @@ export default async function MarketingPage({
           {myRole === 'marketing' ? '🌱 Meus leads' : '📣 Marketing'}
         </h1>
         <div className="flex gap-2">
-          <Link href="/clientes/novo" className="btn-primary">+ Cadastrar lead</Link>
+          <Link href="/marketing/novo" className="btn-primary">+ Cadastrar lead</Link>
           <Link href="/marketing/relatorio" className="btn-ghost">📊 Relatório</Link>
         </div>
       </div>

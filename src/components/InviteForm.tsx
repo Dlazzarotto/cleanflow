@@ -37,7 +37,7 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
           email,
           full_name: fullName,
           role,
-          team_id: teamId || undefined,
+          team_id: role === 'cleaner' || role === 'supervisor' ? teamId || undefined : undefined,
           password: password || undefined,
         }),
       });
@@ -85,15 +85,23 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
             <option value="admin">Administrador(a)</option>
           </select>
         </div>
-        <div>
-          <label className="label" htmlFor="inv-team">Colocar na equipe (opcional)</label>
-          <select className="input" id="inv-team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-            <option value="">Nenhuma por enquanto</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
+        {role !== 'marketing' && role !== 'admin' ? (
+          <div>
+            <label className="label" htmlFor="inv-team">Colocar na equipe de limpeza (opcional)</label>
+            <select className="input" id="inv-team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <option value="">Nenhuma por enquanto</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="rounded-card bg-brand-50 p-3 text-sm text-brand-800 md:mt-7">
+            {role === 'marketing'
+              ? 'O time de marketing não entra em equipes de campo: cadastra leads e acompanha o funil, sem jornada nem check-in.'
+              : 'Administradores não entram em equipes de campo.'}
+          </div>
+        )}
         <div className="md:col-span-2">
           <label className="label" htmlFor="inv-pass">Senha inicial (opcional — se vazio, geramos uma)</label>
           <input className="input" id="inv-pass" value={password} onChange={(e) => setPassword(e.target.value)} />

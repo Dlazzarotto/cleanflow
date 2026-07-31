@@ -513,3 +513,29 @@ export async function markContactedAction(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/marketing');
 }
+
+
+// ---------- CADASTRO DE LEAD (time de marketing) ----------
+export async function createLeadAction(formData: FormData) {
+  const { supabase, companyId } = await getCompanyId();
+
+  const { error } = await supabase.from('clients').insert({
+    company_id: companyId,
+    full_name: String(formData.get('full_name') ?? '').trim(),
+    phone: String(formData.get('phone') ?? '') || null,
+    email: String(formData.get('email') ?? '') || null,
+    address: String(formData.get('address') ?? '') || null,
+    lat: formData.get('lat') ? Number(formData.get('lat')) : null,
+    lng: formData.get('lng') ? Number(formData.get('lng')) : null,
+    preferences: String(formData.get('preferences') ?? '') || null,
+    language: String(formData.get('language') ?? 'pt'),
+    source: String(formData.get('source') ?? '') || null,
+    status: 'lead',
+    entry_source: 'marketing',
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/marketing');
+  revalidatePath('/clientes');
+  redirect('/marketing');
+}
