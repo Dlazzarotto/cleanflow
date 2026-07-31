@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const { start: startOfDay, end: endOfDay } = etTodayRange();
   const startOfMonth = etMonthStart();
 
-  const [todayRes, monthRes, clientsRes] = await Promise.all([
+  const [todayRes, monthRes, clientsRes, shiftsRes] = await Promise.all([
     supabase
       .from('bookings')
       .select('*, clients(full_name, address), teams(name, color)')
@@ -24,7 +24,13 @@ export default async function DashboardPage() {
       .select('price, status')
       .gte('scheduled_at', startOfMonth),
     supabase.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+    supabase
+      .from('work_shifts')
+      .select('person_name, started_at, ended_at')
+      .gte('started_at', startOfDay)
+      .order('started_at'),
   ]);
+  const shifts = shiftsRes.data ?? [];
 
   const todayBookings = (todayRes.data ?? []) as Booking[];
   const monthBookings = monthRes.data ?? [];
@@ -60,6 +66,27 @@ export default async function DashboardPage() {
           <p className="text-3xl font-bold">{cancelled}</p>
         </div>
       </div>
+
+      <h2 className="mb-3 text-xl font-semibold text-brand-900">Equipe hoje</h2>
+      {shifts.length === 0 ? (
+        <div className="card mb-8 text-brand-800">
+          Ninguém iniciou o dia ainda. A equipe registra o início pelo app antes da primeira casa.
+        </div>
+      ) : (
+        <div className="card mb-8 space-y-2">
+          {shifts.map((s: any, i: number) => (
+            <div key={i} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium">{s.person_name}</span>
+              <span className="text-brand-800">
+                início {new Date(s.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                {s.ended_at
+                  ? ` · fim ${new Date(s.ended_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                  : ' · em campo'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <h2 className="mb-3 text-xl font-semibold text-brand-900">Agenda de hoje</h2>
       {todayBookings.length === 0 ? (

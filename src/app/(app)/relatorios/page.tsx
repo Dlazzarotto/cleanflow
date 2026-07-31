@@ -76,6 +76,12 @@ export default async function RelatoriosPage({
   const since = new Date(Date.now() - dias * 86400000);
 
   const supabase = createClient();
+  const { data: shiftRows } = await supabase
+    .from('work_shifts')
+    .select('person_name, started_at, ended_at')
+    .gte('started_at', since.toISOString())
+    .not('ended_at', 'is', null);
+
   const { data } = await supabase
     .from('bookings')
     .select('id, team_id, scheduled_at, duration_minutes, price, checkin_at, checkout_at, clients(lat, lng), teams(name, color)')
@@ -164,6 +170,20 @@ export default async function RelatoriosPage({
     totalHouseMin + totalTravelMin > 0
       ? Math.round((totalHouseMin / (totalHouseMin + totalTravelMin)) * 100)
       : 0;
+
+  // Jornadas por pessoa
+  const jornada = new Map<string, { dias: number; minutos: number }>();
+  for (const sh of (shiftRows ?? []) as any[]) {
+    const min = (new Date(sh.ended_at).getTime() - new Date(sh.started_at).getTime()) / 60000;
+    if (min <= 0 || min > 16 * 60) continue;
+    const j = jornada.get(sh.person_name) ?? { dias: 0, minutos: 0 };
+    j.dias += 1;
+    j.minutos += min;
+    jornada.set(sh.person_name, j);
+  }
+  const jornadas = Array.from(jornada.entries())
+    .map(([nome, j]) => ({ nome, ...j }))
+    .sort((a, b) => b.minutos - a.minutos);
 
   return (
     <div>
@@ -263,6 +283,25 @@ export default async function RelatoriosPage({
               );
             })}
           </div>
+
+          {jornadas.length > 0 && (
+            <>
+              <h2 className="mb-3 mt-8 text-xl font-semibold text-brand-900">
+                Jornada da equipe no período
+              </h2>
+              <div className="card space-y-2">
+                {jornadas.map((j) => (
+                  <div key={j.nome} className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-100 pb-2 last:border-0">
+                    <span className="font-medium">{j.nome}</span>
+                    <span className="text-brand-800">
+                      {j.dias} dia(s) · {fmtMin(j.minutos)} em campo · média{' '}
+                      {fmtMin(j.minutos / j.dias)}/dia
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <p className="mt-6 text-sm text-brand-800">
             Como ler: o tempo na casa vem do check-in/check-out real da equipe; o trajeto é o intervalo

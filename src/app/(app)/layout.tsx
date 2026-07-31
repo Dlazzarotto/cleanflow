@@ -11,6 +11,7 @@ const MANAGER_NAV = [
   { href: '/clientes', label: 'Clientes', icon: '👤' },
   { href: '/marketing', label: 'Marketing', icon: '📣' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
+  { href: '/ocorrencias', label: 'Ocorrências', icon: '⚠️' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/mapa', label: 'Mapa', icon: '🗺️' },
   { href: '/minha-agenda', label: 'Minha agenda', icon: '📱' },

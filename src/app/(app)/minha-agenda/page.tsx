@@ -4,11 +4,16 @@ import { STATUS_LABEL, type BookingStatus } from '@/lib/types';
 import CheckinButton from '@/components/CheckinButton';
 import ArrivalWatcher from '@/components/ArrivalWatcher';
 import LocationReporter from '@/components/LocationReporter';
+import IncidentForm from '@/components/IncidentForm';
+import AutoCloseWatcher from '@/components/AutoCloseWatcher';
+import DayControl from '@/components/DayControl';
 
 export const dynamic = 'force-dynamic';
 
 interface AgendaItem {
   id: string;
+  client_id?: string | null;
+  lockout_status?: string | null;
   scheduled_at: string;
   duration_minutes: number;
   status: BookingStatus;
@@ -34,6 +39,9 @@ const NEXT_STATUS: Partial<Record<BookingStatus, { to: string; label: string }>>
   em_andamento: { to: 'concluido', label: '✅ Check-out' },
 };
 
+const SEM_ACESSO_AVISO =
+  'Registrado como sem acesso. O escritório foi notificado e vai falar com o cliente.';
+
 export default async function MinhaAgendaPage() {
   const supabase = createClient();
   const {
@@ -46,6 +54,13 @@ export default async function MinhaAgendaPage() {
   const end = new Date(start.getTime() + 7 * 86400000);
 
   // Visao segura: apenas limpezas das equipes do usuario, sem valores
+  const { data: companyId } = await supabase.rpc('current_company_id');
+
+  const { data: openShiftId } = await supabase.rpc('my_open_shift');
+  const { data: openShift } = openShiftId
+    ? await supabase.from('work_shifts').select('started_at').eq('id', openShiftId as string).single()
+    : { data: null };
+
   const { data } = await supabase
     .from('team_agenda')
     .select('*')
@@ -74,8 +89,33 @@ export default async function MinhaAgendaPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <LocationReporter />
+      <AutoCloseWatcher
+        active={items
+          .filter((b) => b.status === 'em_andamento' && b.lat != null && b.lng != null)
+          .map((b) => ({
+            id: b.id,
+            clientId: b.client_id ?? null,
+            name: b.client_name,
+            lat: b.lat as number,
+            lng: b.lng as number,
+          }))}
+      />
       <ArrivalWatcher targets={arrivalTargets} />
-      <h1 className="mb-6 text-3xl font-bold text-brand-900">Minha agenda</h1>
+      <h1 className="mb-4 text-3xl font-bold text-brand-900">Minha agenda</h1>
+
+      <DayControl
+        openShift={openShift as { started_at: string } | null}
+        pendingCount={
+          items.filter((b) => {
+            const hoje = new Date().toDateString();
+            return (
+              new Date(b.scheduled_at).toDateString() === hoje &&
+              b.status !== 'concluido' &&
+              b.status !== 'sem_acesso'
+            );
+          }).length
+        }
+      />
 
       {items.length === 0 && (
         <div className="card text-brand-800">
@@ -127,10 +167,45 @@ export default async function MinhaAgendaPage() {
                     {b.products_notes && <p>🧴 Produtos: {b.products_notes}</p>}
                     {b.notes && <p>💬 Observações: {b.notes}</p>}
                   </div>
-                  {next && (
+                  {b.lockout_status === 'solicitado' && b.status === 'em_andamento' && (
+                    <p className="mt-3 rounded-card bg-sun/20 p-3 text-brand-900">
+                      ⏳ Aviso enviado ao escritório. Aguarde a orientação antes de sair.
+                    </p>
+                  )}
+                  {b.lockout_status === 'recusado' && (
+                    <p className="mt-3 rounded-card bg-brand-50 p-3 text-brand-900">
+                      O escritório pediu para seguir com o serviço. Fale com a supervisão em caso de dúvida.
+                    </p>
+                  )}
+                  {b.status === 'sem_acesso' && (
+                    <p className="mt-3 rounded-card bg-sun/20 p-3 text-brand-900">🚪 {SEM_ACESSO_AVISO}</p>
+                  )}
+                  {next && !openShift && (
+                    <p className="mt-3 rounded-card bg-brand-50 p-3 text-brand-800">
+                      ▶️ Inicie seu dia acima para registrar chegada e conclusão.
+                    </p>
+                  )}
+                  {next && openShift && (
                     <div className="mt-3">
-                      <CheckinButton bookingId={b.id} to={next.to} label={next.label} />
+                      <CheckinButton
+                        bookingId={b.id}
+                        to={next.to}
+                        label={next.label}
+                        clientLat={b.lat}
+                        clientLng={b.lng}
+                      />
                     </div>
+                  )}
+                  {companyId && openShift && (
+                    <IncidentForm
+                      bookingId={b.id}
+                      clientId={b.client_id ?? null}
+                      companyId={companyId as string}
+                      clientName={b.client_name}
+                      clientLat={b.lat}
+                      clientLng={b.lng}
+                      canLockout={b.status === 'em_andamento'}
+                    />
                   )}
                 </div>
               );

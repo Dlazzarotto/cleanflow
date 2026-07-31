@@ -14,7 +14,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
   const isOwner = myRole === 'owner';
   const isMkt = myRole === 'marketing';
   const supabase = createClient();
-  const [{ data: client }, { data: bookings }] = await Promise.all([
+  const [{ data: client }, { data: bookings }, { data: incidents }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', params.id).single(),
     supabase
       .from('bookings')
@@ -22,6 +22,14 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
       .eq('client_id', params.id)
       .order('scheduled_at', { ascending: false })
       .limit(20),
+    myRole === 'marketing'
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from('incidents')
+          .select('id, kind, moment, severity, description, status, reporter_name, created_at')
+          .eq('client_id', params.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
   ]);
   if (!client) notFound();
   if (myRole === 'marketing' && (client as any).created_by !== myId) redirect('/marketing');
@@ -84,6 +92,28 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
       {isOwner && c.status !== 'deletado' && (
         <div className="mb-6">
           <BanClientForm clientId={c.id} clientName={c.full_name} />
+        </div>
+      )}
+
+      {(incidents ?? []).length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-3 text-xl font-semibold text-brand-900">
+            ⚠️ Ocorrências registradas ({(incidents ?? []).length})
+          </h2>
+          <div className="space-y-2">
+            {(incidents as any[]).map((inc) => (
+              <div key={inc.id} className="card !p-3">
+                <p className="text-sm text-brand-800">
+                  {new Date(inc.created_at).toLocaleString('pt-BR')} · {inc.reporter_name} ·{' '}
+                  {inc.status === 'resolvida' ? 'resolvida' : inc.status === 'em_analise' ? 'em análise' : 'aberta'}
+                </p>
+                <p>{inc.description}</p>
+              </div>
+            ))}
+          </div>
+          <Link href="/ocorrencias" className="mt-2 inline-block font-semibold text-brand-700 underline">
+            Ver todas as ocorrências
+          </Link>
         </div>
       )}
 

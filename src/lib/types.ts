@@ -6,7 +6,8 @@ export type BookingStatus =
   | 'a_caminho'
   | 'em_andamento'
   | 'concluido'
-  | 'cancelado';
+  | 'cancelado'
+  | 'sem_acesso';
 
 export interface Company {
   id: string;
@@ -113,4 +114,5 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   em_andamento: 'Em andamento',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
+  sem_acesso: 'Sem acesso 🚪',
 };

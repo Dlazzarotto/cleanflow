@@ -12,7 +12,10 @@ alter table public.clients add column if not exists banned_by uuid references au
 create or replace function public.check_ban_reason()
 returns trigger language plpgsql as $$
 begin
-  if new.status = 'deletado' and coalesce(trim(new.ban_reason), '') = '' then
+  -- Exige motivo apenas no momento do banimento (nao a cada atualizacao posterior)
+  if new.status = 'deletado'
+     and (tg_op = 'INSERT' or old.status is distinct from 'deletado')
+     and coalesce(trim(new.ban_reason), '') = '' then
     raise exception 'Para deletar/banir um cliente é obrigatório registrar o motivo';
   end if;
   if new.status <> 'deletado' then
