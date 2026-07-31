@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getPlatformAdmin } from '@/lib/platform';
 
 const MANAGER_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -35,15 +36,35 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  const platform = await getPlatformAdmin();
   const { data: companyId } = await supabase.rpc('current_company_id');
+  if (!companyId && platform) redirect('/admin');
   const { data: membership } = companyId
     ? await supabase
         .from('memberships')
-        .select('full_name, role, companies(name)')
+        .select('full_name, role, companies(name, account_status)')
         .eq('user_id', user.id)
         .eq('company_id', companyId)
         .single()
     : { data: null };
+
+  const accountStatus = (membership as any)?.companies?.account_status ?? 'ativa';
+  if (accountStatus === 'suspensa' || accountStatus === 'cancelada') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-brand-900 p-5">
+        <div className="card max-w-md text-center">
+          <p className="text-2xl font-bold text-brand-900">Acesso temporariamente suspenso</p>
+          <p className="mt-3 text-brand-800">
+            O acesso desta conta está suspenso. Seus dados estão preservados. Entre em contato com o
+            suporte do CleanFlow para regularizar.
+          </p>
+          <form action="/api/logout" method="post" className="mt-5">
+            <button className="btn-ghost w-full">Sair</button>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   const companyName = (membership as any)?.companies?.name ?? 'Sua empresa';
   const role = (membership as any)?.role ?? 'cleaner';
@@ -73,6 +94,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
         </nav>
+        {platform && (
+          <Link
+            href="/admin"
+            className="mx-5 mt-3 flex min-h-touch items-center justify-center gap-2 rounded-card border border-aqua-400 px-4 text-aqua-400"
+          >
+            ⚙️ Painel CleanFlow
+          </Link>
+        )}
         <form action="/api/logout" method="post" className="p-5">
           <button className="btn-ghost w-full !border-brand-100 !text-brand-100 hover:!bg-brand-800">
             Sair

@@ -47,7 +47,14 @@ export async function createTeamAction(formData: FormData) {
     name: String(formData.get('name') ?? '').trim(),
     color: String(formData.get('color') ?? '#13706B'),
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message.includes('plano permite')) {
+      throw new Error(
+        'Limite de equipes do seu plano atingido. Fale com o suporte do CleanFlow para fazer upgrade.'
+      );
+    }
+    throw new Error(error.message);
+  }
   revalidatePath('/equipes');
 }
 

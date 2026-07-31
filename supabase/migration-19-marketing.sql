@@ -33,6 +33,11 @@ create policy "clients_manager_all" on public.clients
 create or replace function public.guard_client_status()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  -- Sem usuario logado = operacao administrativa (SQL Editor, importacao, rotina)
+  if auth.uid() is null then
+    return new;
+  end if;
+
   if tg_op = 'UPDATE' and new.status is distinct from old.status then
     if not public.is_manager() then
       raise exception 'Somente a gestão pode definir o destino do cliente (ativo, em espera, não fechou, ex-cliente)';

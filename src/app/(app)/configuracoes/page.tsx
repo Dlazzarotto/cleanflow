@@ -3,6 +3,8 @@ import { getAuth, isManager } from '@/lib/auth';
 import { updateMyNameAction, saveLocaleAction, updateCompanyAction } from '@/lib/actions';
 import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import Link from 'next/link';
+import { planName, maxTeams, monthlyFee } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +22,7 @@ export default async function ConfiguracoesPage() {
   const [{ data: settings }, { data: company }, { data: authUser }] = await Promise.all([
     supabase.from('user_settings').select('locale').eq('user_id', userId).single(),
     manager
-      ? supabase.from('companies').select('name, phone, email, address, lat, lng').eq('id', companyId).single()
+      ? supabase.from('companies').select('name, phone, email, address, lat, lng, plan, extra_teams, monthly_fee, account_status, next_due_date').eq('id', companyId).single()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
   ]);
@@ -68,6 +70,29 @@ export default async function ConfiguracoesPage() {
           <button className="btn-ghost" type="submit">Salvar idioma</button>
         </form>
       </div>
+
+      {/* Assinatura */}
+      {manager && company && (
+        <div className="card space-y-2">
+          <h2 className="text-xl font-semibold text-brand-900">Assinatura CleanFlow</h2>
+          <p className="text-brand-800">
+            Plano <strong>{planName((company as any).plan)}</strong> ·{' '}
+            até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s) ·{' '}
+            US$ {Number((company as any).monthly_fee ?? monthlyFee((company as any).plan, (company as any).extra_teams ?? 0)).toFixed(2)}/mês
+          </p>
+          {(company as any).next_due_date && (
+            <p className="text-brand-800">
+              Próximo vencimento: {new Date((company as any).next_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+            </p>
+          )}
+          <p className="text-sm text-brand-800">
+            Para mudar de plano ou tirar dúvidas sobre a assinatura, fale com o suporte do CleanFlow.{' '}
+            <Link href="/termos" className="font-semibold text-brand-700 underline">
+              Ver contrato de assinatura
+            </Link>
+          </p>
+        </div>
+      )}
 
       {/* Empresa (gestao) */}
       {manager && company && (

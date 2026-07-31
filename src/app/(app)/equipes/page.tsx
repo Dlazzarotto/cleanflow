@@ -14,6 +14,7 @@ import {
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import InviteForm from '@/components/InviteForm';
 import type { Team } from '@/lib/types';
+import { maxTeams, planName, PLANS } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export default async function EquipesPage() {
   const supabase = createClient();
   const { data: companyId } = await supabase.rpc('current_company_id');
 
-  const [{ data: teams }, { data: members }, { data: teamMembers }, { data: positions }] = await Promise.all([
+  const [{ data: teams }, { data: members }, { data: teamMembers }, { data: positions }, { data: companyRow }] = await Promise.all([
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
@@ -39,7 +40,11 @@ export default async function EquipesPage() {
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
     supabase.from('positions').select('*').order('name'),
+    supabase.from('companies').select('plan, extra_teams').eq('id', companyId).single(),
   ]);
+  const plan = (companyRow as any)?.plan ?? 'standard';
+  const extras = (companyRow as any)?.extra_teams ?? 0;
+  const limite = maxTeams(plan, extras);
   const positionList = positions ?? [];
 
   const teamList = (teams ?? []) as Team[];
@@ -163,6 +168,21 @@ export default async function EquipesPage() {
       <InviteForm teams={teamList.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }))} />
 
       {/* Nova equipe */}
+      <div className="card">
+        <p className="font-semibold text-brand-900">
+          Plano {planName(plan)} · {teamList.filter((t) => t.active).length} de {limite} equipe(s) em uso
+        </p>
+        {teamList.filter((t) => t.active).length >= limite && (
+          <p className="mt-2 text-brand-800">
+            Você atingiu o limite do seu plano.{' '}
+            {plan === 'standard'
+              ? `O plano Plus inclui ${PLANS.plus.baseTeams} equipes por US$ ${PLANS.plus.price}/mês.`
+              : `Equipes adicionais custam US$ ${PLANS.plus.extraTeamPrice}/mês cada.`}{' '}
+            Fale com o suporte do CleanFlow para fazer o upgrade.
+          </p>
+        )}
+      </div>
+
       <form action={createTeamAction} className="card flex flex-wrap items-end gap-3">
         <div className="grow">
           <label className="label" htmlFor="name">Nova equipe</label>
