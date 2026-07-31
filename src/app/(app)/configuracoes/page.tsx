@@ -5,6 +5,7 @@ import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
 import { planName, maxTeams, monthlyFee } from '@/lib/plans';
+import EmailDiagnostic from '@/components/EmailDiagnostic';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,8 @@ export default async function ConfiguracoesPage() {
           <button className="btn-ghost" type="submit">Salvar idioma</button>
         </form>
       </div>
+
+      {manager && <EmailDiagnostic />}
 
       {/* Assinatura */}
       {manager && company && (

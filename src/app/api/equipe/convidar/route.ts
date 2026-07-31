@@ -137,9 +137,22 @@ export async function POST(request: Request) {
     }
   }
 
-  // 5) Email com os dados de acesso (best-effort)
+  // 5) Email com os dados de acesso.
+  // Se a pessoa ja existia mas NUNCA entrou, gera uma senha nova e envia.
   let emailStatus: string | null = null;
-  if (createdNew) {
+  let senhaEnviada: string | null = createdNew ? (body as any)._password : null;
+
+  if (!createdNew && userId) {
+    const { data: existente } = await admin.auth.admin.getUserById(userId);
+    const nuncaEntrou = !existente?.user?.last_sign_in_at;
+    if (nuncaEntrou) {
+      const nova = Math.random().toString(36).slice(-10) + 'A1!';
+      const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password: nova });
+      if (!pwError) senhaEnviada = nova;
+    }
+  }
+
+  {
     const { data: company } = await admin
       .from('companies')
       .select('name, email')
@@ -158,7 +171,7 @@ export async function POST(request: Request) {
         companyName,
         loginUrl: `${origin}/login`,
         email,
-        password: (body as any)._password,
+        password: senhaEnviada,
         isReset: false,
       }),
     });
@@ -167,13 +180,15 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     created_new_user: createdNew,
-    temp_password: createdNew ? (body as any)._password : null,
-    email_sent: createdNew ? emailStatus === null : false,
+    temp_password: senhaEnviada,
+    email_sent: emailStatus === null,
     email_error: emailStatus,
     message: createdNew
       ? 'Acesso criado. Anote a senha temporária e entregue à pessoa.'
-      : alreadyLinked
-        ? 'Esta pessoa já tinha vínculo com a sua empresa — o acesso foi reativado sem alterar o nome nem rebaixar o papel.'
-        : 'Esta pessoa já tinha login (de outra empresa) — o vínculo com a sua empresa foi criado com o mesmo email e senha que ela já usa.',
+      : senhaEnviada
+        ? 'Esta pessoa já tinha cadastro mas nunca entrou — geramos uma senha nova. Anote e entregue a ela.'
+        : alreadyLinked
+          ? 'Esta pessoa já tinha vínculo com a sua empresa e já usou o sistema — o acesso foi reativado com a senha que ela já usa.'
+          : 'Esta pessoa já tinha login (de outra empresa) — o vínculo foi criado com o mesmo email e senha que ela já usa.',
   });
 }
