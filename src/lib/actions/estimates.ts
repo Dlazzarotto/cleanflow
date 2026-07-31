@@ -57,6 +57,9 @@ export async function saveEstimateAction(payload: {
   lng: number | null;
   frequency: string | null;
   language: string | null;
+  first_price?: number | null;
+  first_minutes?: number | null;
+  recurring_price?: number | null;
   input: EstimateInput;
   market_notes: string | null;
 }) {
@@ -76,6 +79,9 @@ export async function saveEstimateAction(payload: {
     lng: payload.lng,
     frequency: payload.frequency,
     language: payload.language ?? 'pt',
+    first_price: payload.first_price ?? null,
+    first_minutes: payload.first_minutes ?? null,
+    recurring_price: payload.recurring_price ?? null,
     bedrooms: payload.input.bedrooms,
     full_baths: payload.input.full_baths,
     half_baths: payload.input.half_baths,
@@ -201,6 +207,9 @@ export async function updateEstimateAction(
     lng: number | null;
     frequency: string | null;
     language: string | null;
+    first_price?: number | null;
+    first_minutes?: number | null;
+    recurring_price?: number | null;
     input: EstimateInput;
     market_notes: string | null;
   }
@@ -222,6 +231,9 @@ export async function updateEstimateAction(
       lng: payload.lng,
       frequency: payload.frequency,
       language: payload.language ?? 'pt',
+      first_price: payload.first_price ?? null,
+      first_minutes: payload.first_minutes ?? null,
+      recurring_price: payload.recurring_price ?? null,
       bedrooms: payload.input.bedrooms,
       full_baths: payload.input.full_baths,
       half_baths: payload.input.half_baths,
@@ -258,7 +270,7 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
 
   const { data: e, error: fetchError } = await supabase
     .from('estimates')
-    .select('id, client_id, frequency, minutes, final_price, price_low')
+    .select('id, client_id, frequency, minutes, final_price, price_low, first_price, first_minutes, recurring_price')
     .eq('id', id)
     .single();
   if (fetchError || !e) throw new Error('Estimate não encontrado');
@@ -268,7 +280,9 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
     e.frequency === 'semanal' ? 7 : e.frequency === 'quinzenal' ? 14 : e.frequency === 'mensal' ? 28 : 0;
   const total = step > 0 ? occurrences : 1;
   const seriesId = step > 0 ? crypto.randomUUID() : null;
-  const price = Number(e.final_price ?? e.price_low ?? 0);
+  const precoManutencao = Number(e.recurring_price ?? e.final_price ?? e.price_low ?? 0);
+  const precoPrimeira = Number(e.first_price ?? precoManutencao);
+  const minutosPrimeira = Number(e.first_minutes ?? e.minutes ?? 120);
 
   const rows = Array.from({ length: total }, (_, i) => ({
     company_id: companyId,
@@ -276,8 +290,10 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
     client_id: e.client_id,
     team_id: teamId,
     scheduled_at: etToUtcIso(addDaysYmd(date, i * step), time),
-    duration_minutes: e.minutes ?? 120,
-    price,
+    // Primeira visita: limpeza profunda, mais tempo e valor maior
+    duration_minutes: i === 0 && step > 0 ? minutosPrimeira : e.minutes ?? 120,
+    price: i === 0 && step > 0 ? precoPrimeira : precoManutencao,
+    service_type: i === 0 && step > 0 ? 'primeira' : 'manutencao',
     status: 'agendado',
     series_id: seriesId,
   }));
@@ -286,7 +302,10 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   await supabase.from('estimates').update({ series_id: seriesId }).eq('id', id);
-  await supabase.from('clients').update({ status: 'ativo' }).eq('id', e.client_id);
+  await supabase
+    .from('clients')
+    .update({ status: 'ativo', default_price: precoManutencao > 0 ? precoManutencao : null })
+    .eq('id', e.client_id);
 
   revalidatePath('/calendario');
   revalidatePath('/agendamentos');

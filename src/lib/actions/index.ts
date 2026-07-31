@@ -79,6 +79,7 @@ export async function createBookingAction(formData: FormData) {
   const base = {
     company_id: companyId,
     type: String(formData.get('type') ?? 'limpeza'),
+    service_type: String(formData.get('service_type') ?? 'manutencao'),
     client_id: String(formData.get('client_id')),
     team_id: String(formData.get('team_id') ?? '') || null,
     duration_minutes: Number(formData.get('duration_minutes') ?? 120),

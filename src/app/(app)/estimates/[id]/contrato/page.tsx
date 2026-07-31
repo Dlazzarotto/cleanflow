@@ -36,7 +36,9 @@ export default async function ContratoPage({ params }: { params: { id: string } 
     clientAddress: e.address ?? e.clients?.address ?? '____________________________',
     freq: (FREQ[lang][e.frequency] ?? FREQ[lang].indef).toLowerCase(),
     time: formatMinutes(e.minutes),
-    price: e.final_price ? usd(e.final_price) : `${usd(e.price_low)} – ${usd(e.price_high)}`,
+    price: e.first_price && e.recurring_price
+      ? `${usd(e.first_price)} (${lang === 'en' ? 'first, deep cleaning' : lang === 'es' ? 'primera, profunda' : lang === 'fr' ? 'premier, en profondeur' : 'primeira, profunda'}) · ${usd(e.final_price ?? e.recurring_price)} (${lang === 'en' ? 'following cleanings' : lang === 'es' ? 'limpiezas siguientes' : lang === 'fr' ? 'nettoyages suivants' : 'limpezas seguintes'})`
+      : e.final_price ? usd(e.final_price) : `${usd(e.price_low)} – ${usd(e.price_high)}`,
     cancelHours: settings.cancel_notice_hours,
     lockoutFee: usd(settings.lockout_fee),
     terminationDays: settings.termination_notice_days,

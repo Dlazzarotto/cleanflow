@@ -188,7 +188,17 @@ export default function EstimateForm({
     [bedrooms, fullBaths, halfBaths, bedroomTasks, bathroomTasks, extras, laundry, laundryLoads, deepClean]
   );
 
-  const result = useMemo(() => calcEstimate(input, settings), [input, settings]);
+  // Manutenção (recorrente) e primeira limpeza (profunda)
+  const manutencao = useMemo(
+    () => calcEstimate({ ...input, deep_clean: false }, settings),
+    [input, settings]
+  );
+  const primeira = useMemo(
+    () => calcEstimate({ ...input, deep_clean: true }, settings),
+    [input, settings]
+  );
+  const recorrente = frequency !== 'unica';
+  const result = deepClean || !recorrente ? (deepClean ? primeira : manutencao) : manutencao;
 
   function toggleIn(list: string[], id: string) {
     return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -277,6 +287,9 @@ export default function EstimateForm({
         lat: coords.lat ?? c?.lat ?? null,
         lng: coords.lng ?? c?.lng ?? null,
         input,
+        first_price: recorrente ? primeira.price_low : null,
+        first_minutes: recorrente ? primeira.minutes : null,
+        recurring_price: recorrente ? manutencao.price_low : null,
         market_notes: market
           ? `Mercado em ${city}: ${usd(market.visit_low)}–${usd(market.visit_high)}/visita, ${usd(market.hourly_low)}–${usd(market.hourly_high)}/h. ${market.resumo}`
           : null,
@@ -454,23 +467,53 @@ export default function EstimateForm({
               <Stepper label="Cargas de roupa" value={laundryLoads} onChange={setLaundryLoads} min={1} max={6} />
             </div>
           )}
-          <label className="flex min-h-touch cursor-pointer items-center gap-3 font-medium text-brand-800">
-            <input type="checkbox" className="h-5 w-5 accent-brand-700" checked={deepClean} onChange={() => setDeepClean(!deepClean)} />
-            ✨ Primeira limpeza / deep cleaning (×{settings.deep_multiplier})
-          </label>
+          {recorrente ? (
+            <div className="rounded-card bg-brand-50 p-3">
+              <p className="font-semibold text-brand-900">
+                ✨ A primeira limpeza é profunda (×{settings.deep_multiplier})
+              </p>
+              <p className="mt-1 text-sm text-brand-800">
+                Padrão do mercado: a primeira visita leva mais tempo e custa mais; as seguintes são
+                de manutenção. O cliente vê os dois valores no documento.
+              </p>
+            </div>
+          ) : (
+            <label className="flex min-h-touch cursor-pointer items-center gap-3 font-medium text-brand-800">
+              <input type="checkbox" className="h-5 w-5 accent-brand-700" checked={deepClean} onChange={() => setDeepClean(!deepClean)} />
+              ✨ Limpeza profunda (deep cleaning) ×{settings.deep_multiplier}
+            </label>
+          )}
         </div>
       </div>
 
       {/* Painel de resultado */}
       <div className="space-y-4 lg:sticky lg:top-8 lg:self-start">
         <div className="card bg-brand-900 !border-brand-900 text-white">
-          <p className="text-brand-100">Tempo estimado</p>
-          <p className="text-3xl font-bold">{formatMinutes(result.minutes)}</p>
-          <p className="mt-4 text-brand-100">Faixa de preço</p>
-          <p className="text-4xl font-bold text-aqua-400">
-            {usd(result.price_low)} – {usd(result.price_high)}
-          </p>
-          <p className="mt-2 text-sm text-brand-100">
+          {recorrente ? (
+            <>
+              <p className="text-brand-100">✨ Primeira limpeza (profunda)</p>
+              <p className="text-3xl font-bold text-aqua-400">
+                {usd(primeira.price_low)} – {usd(primeira.price_high)}
+              </p>
+              <p className="text-sm text-brand-100">{formatMinutes(primeira.minutes)}</p>
+
+              <p className="mt-4 text-brand-100">🧹 Limpezas seguintes ({frequency})</p>
+              <p className="text-3xl font-bold text-white">
+                {usd(manutencao.price_low)} – {usd(manutencao.price_high)}
+              </p>
+              <p className="text-sm text-brand-100">{formatMinutes(manutencao.minutes)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-brand-100">Tempo estimado</p>
+              <p className="text-3xl font-bold">{formatMinutes(result.minutes)}</p>
+              <p className="mt-4 text-brand-100">Faixa de preço</p>
+              <p className="text-4xl font-bold text-aqua-400">
+                {usd(result.price_low)} – {usd(result.price_high)}
+              </p>
+            </>
+          )}
+          <p className="mt-3 text-sm text-brand-100">
             Base: {usd(settings.hourly_rate)}/h · mínimo {usd(settings.min_price)}
           </p>
         </div>

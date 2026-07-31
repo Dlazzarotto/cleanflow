@@ -82,10 +82,27 @@ export default async function EstimateDocumentoPage({ params }: { params: { id: 
               <p className="font-semibold">{FREQ[lang][e.frequency] ?? FREQ[lang].indef}</p>
             </div>
             <div className="text-right">
-              <p className="text-brand-800">{t.investment}</p>
-              <p className="text-3xl font-bold text-brand-900">
-                {e.final_price ? usd(e.final_price) : `${usd(e.price_low)} – ${usd(e.price_high)}`}
-              </p>
+              {e.first_price && e.recurring_price ? (
+                <>
+                  <p className="text-brand-800">
+                    {lang === 'en' ? 'First cleaning (deep)' : lang === 'es' ? 'Primera limpieza (profunda)' : lang === 'fr' ? 'Premier nettoyage (en profondeur)' : 'Primeira limpeza (profunda)'}
+                  </p>
+                  <p className="text-2xl font-bold text-brand-900">{usd(e.first_price)}</p>
+                  <p className="mt-2 text-brand-800">
+                    {lang === 'en' ? 'Following cleanings' : lang === 'es' ? 'Limpiezas siguientes' : lang === 'fr' ? 'Nettoyages suivants' : 'Limpezas seguintes'}
+                  </p>
+                  <p className="text-3xl font-bold text-brand-900">
+                    {usd(e.final_price ?? e.recurring_price)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-brand-800">{t.investment}</p>
+                  <p className="text-3xl font-bold text-brand-900">
+                    {e.final_price ? usd(e.final_price) : `${usd(e.price_low)} – ${usd(e.price_high)}`}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -185,3 +185,21 @@ export function formatMinutes(min: number) {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}min`;
 }
+
+
+// ---------- Tipos de servico ----------
+export const SERVICE_TYPES = [
+  { key: 'manutencao', label: '🧹 Manutenção', short: 'Manutenção' },
+  { key: 'primeira', label: '✨ Primeira limpeza (profunda)', short: 'Primeira (profunda)' },
+  { key: 'deep', label: '✨ Limpeza profunda avulsa', short: 'Profunda' },
+  { key: 'pos_obra', label: '🔨 Pós-obra', short: 'Pós-obra' },
+  { key: 'mudanca', label: '📦 Mudança (move in/out)', short: 'Mudança' },
+] as const;
+
+export const SERVICE_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  SERVICE_TYPES.map((t) => [t.key, t.short])
+);
+
+export function isDeep(type: string) {
+  return type === 'primeira' || type === 'deep' || type === 'pos_obra' || type === 'mudanca';
+}

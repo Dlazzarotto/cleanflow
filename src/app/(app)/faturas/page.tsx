@@ -4,6 +4,12 @@ import { requireManager } from '@/lib/auth';
 import { markInvoicePaidAction, setInvoiceStatusAction, refreshOverdueAction } from '@/lib/actions/invoices';
 import { PAYMENT_METHODS, PAYMENT_LABEL } from '@/lib/billing';
 import SendInvoiceButton from '@/components/SendInvoiceButton';
+import {
+  decideExtraAction,
+  createExtraCatalogAction,
+  updateExtraCatalogAction,
+  createStandaloneInvoiceAction,
+} from '@/lib/actions/extras';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +45,18 @@ export default async function FaturasPage({
   if (filtro === 'aberta') query = query.in('status', ['aberta', 'vencida']);
   else if (filtro !== 'todas') query = query.eq('status', filtro);
 
-  const [{ data }, { data: todas }] = await Promise.all([
-    query,
-    supabase.from('invoices').select('status, amount'),
-  ]);
+  const [{ data }, { data: todas }, { data: extrasPend }, { data: catalogo }, { data: clientesAtivos }] =
+    await Promise.all([
+      query,
+      supabase.from('invoices').select('status, amount'),
+      supabase
+        .from('booking_extras')
+        .select('*, bookings(scheduled_at, clients(full_name))')
+        .eq('status', 'solicitado')
+        .order('created_at', { ascending: false }),
+      supabase.from('service_extras').select('*').order('name'),
+      supabase.from('clients').select('id, full_name').eq('status', 'ativo').order('full_name'),
+    ]);
   const invoices = data ?? [];
   const all = todas ?? [];
 
@@ -83,6 +97,129 @@ export default async function FaturasPage({
           <p className="text-3xl font-bold text-brand-700">{usd(recebido)}</p>
         </div>
       </div>
+
+      {/* Extras aguardando preço */}
+      {(extrasPend ?? []).length > 0 && (
+        <div className="card mb-6 border-2 border-sun">
+          <p className="mb-3 text-xl font-semibold text-brand-900">
+            ➕ Serviços extras aguardando você definir o preço ({(extrasPend ?? []).length})
+          </p>
+          <div className="space-y-3">
+            {(extrasPend as any[]).map((ex) => (
+              <form key={ex.id} action={decideExtraAction} className="rounded-card bg-brand-50 p-3">
+                <input type="hidden" name="id" value={ex.id} />
+                <p className="font-semibold">
+                  {ex.bookings?.clients?.full_name ?? 'Cliente'} — {ex.description}
+                </p>
+                <p className="text-sm text-brand-800">
+                  Pedido por {ex.requester_name} em{' '}
+                  {new Date(ex.created_at).toLocaleString('pt-BR')}
+                </p>
+                <div className="mt-2 flex flex-wrap items-end gap-2">
+                  <div>
+                    <label className="label" htmlFor={`px-${ex.id}`}>Valor (USD)</label>
+                    <input className="input !w-32" id={`px-${ex.id}`} name="price" type="number" min={0} step={5} />
+                  </div>
+                  <div className="grow">
+                    <label className="label" htmlFor={`nx-${ex.id}`}>Observação</label>
+                    <input className="input" id={`nx-${ex.id}`} name="notes" placeholder="Ex: combinado por telefone com a cliente" />
+                  </div>
+                  <button className="btn-primary" type="submit" name="decision" value="aprovar">
+                    ✓ Aprovar e cobrar
+                  </button>
+                  <button className="btn-ghost" type="submit" name="decision" value="recusar">
+                    Recusar
+                  </button>
+                </div>
+              </form>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-brand-800">
+            Extras aprovados entram automaticamente na fatura da limpeza. Se a limpeza já foi
+            faturada, use a fatura avulsa abaixo.
+          </p>
+        </div>
+      )}
+
+      {/* Catalogo e fatura avulsa */}
+      <details className="card mb-6">
+        <summary className="cursor-pointer font-semibold text-brand-900">
+          🧰 Catálogo de serviços extras e fatura avulsa
+        </summary>
+
+        <div className="mt-4">
+          <p className="mb-2 font-semibold text-brand-800">
+            Extras com preço definido — a equipe escolhe na lista e já entra na fatura
+          </p>
+          <div className="space-y-2">
+            {(catalogo ?? []).map((c: any) => (
+              <form key={c.id} action={updateExtraCatalogAction} className="flex flex-wrap items-end gap-2 rounded-card border border-brand-100 p-2">
+                <input type="hidden" name="id" value={c.id} />
+                <div className="grow">
+                  <input className="input" name="name" defaultValue={c.name} />
+                </div>
+                <div>
+                  <label className="label" htmlFor={`cp-${c.id}`}>US$</label>
+                  <input className="input !w-24" id={`cp-${c.id}`} name="price" type="number" min={0} step={5} defaultValue={c.price} />
+                </div>
+                <div>
+                  <label className="label" htmlFor={`cm-${c.id}`}>min</label>
+                  <input className="input !w-24" id={`cm-${c.id}`} name="minutes" type="number" min={0} step={5} defaultValue={c.minutes} />
+                </div>
+                <label className="flex min-h-touch items-center gap-2 font-medium text-brand-800">
+                  <input type="checkbox" name="active" className="h-5 w-5 accent-brand-700" defaultChecked={c.active} />
+                  Ativo
+                </label>
+                <button className="btn-ghost" type="submit">Salvar</button>
+              </form>
+            ))}
+          </div>
+
+          <form action={createExtraCatalogAction} className="mt-3 flex flex-wrap items-end gap-2 rounded-card bg-brand-50 p-3">
+            <div className="grow">
+              <label className="label" htmlFor="novo-extra">Novo serviço extra</label>
+              <input className="input" id="novo-extra" name="name" required placeholder="Ex: Limpeza de varanda" />
+            </div>
+            <div>
+              <label className="label" htmlFor="novo-preco">US$</label>
+              <input className="input !w-24" id="novo-preco" name="price" type="number" min={0} step={5} defaultValue={40} />
+            </div>
+            <div>
+              <label className="label" htmlFor="novo-min">min</label>
+              <input className="input !w-24" id="novo-min" name="minutes" type="number" min={0} step={5} defaultValue={20} />
+            </div>
+            <button className="btn-primary" type="submit">Adicionar</button>
+          </form>
+        </div>
+
+        <div className="mt-6 border-t border-brand-100 pt-4">
+          <p className="mb-2 font-semibold text-brand-800">
+            Fatura avulsa — cobrança fora de uma limpeza
+          </p>
+          <form action={createStandaloneInvoiceAction} className="grid gap-3 md:grid-cols-4">
+            <div>
+              <label className="label" htmlFor="fa-client">Cliente</label>
+              <select className="input" id="fa-client" name="client_id" required defaultValue="">
+                <option value="" disabled>Selecionar</option>
+                {(clientesAtivos ?? []).map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.full_name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="label" htmlFor="fa-desc">Descrição</label>
+              <input className="input" id="fa-desc" name="description" placeholder="Ex: limpeza pós-obra na garagem" />
+            </div>
+            <div>
+              <label className="label" htmlFor="fa-valor">Valor (USD)</label>
+              <input className="input" id="fa-valor" name="amount" type="number" min={0} step={5} required />
+            </div>
+            <div className="md:col-span-4">
+              <button className="btn-primary" type="submit">Emitir fatura avulsa</button>
+            </div>
+          </form>
+        </div>
+      </details>
 
       <div className="mb-6 flex flex-wrap gap-2">
         {['aberta', 'vencida', 'paga', 'todas'].map((s) => (

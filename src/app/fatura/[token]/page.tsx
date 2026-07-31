@@ -14,9 +14,13 @@ function usd(n: number) {
 
 export default async function FaturaPublicaPage({ params }: { params: { token: string } }) {
   const supabase = createClient();
-  const { data } = await supabase.rpc('get_invoice_by_token', { p_token: params.token });
+  const [{ data }, { data: itemRows }] = await Promise.all([
+    supabase.rpc('get_invoice_by_token', { p_token: params.token }),
+    supabase.rpc('get_invoice_items_by_token', { p_token: params.token }),
+  ]);
   const inv = Array.isArray(data) ? data[0] : null;
   if (!inv) notFound();
+  const items = (itemRows ?? []) as { description: string; amount: number }[];
 
   const lang = normalizeLang(inv.client_language);
   const t = INVOICE_I18N[lang];
@@ -86,17 +90,33 @@ export default async function FaturaPublicaPage({ params }: { params: { token: s
         </div>
 
         <div className="mb-6 rounded-card border border-brand-100">
-          <div className="flex items-center justify-between border-b border-brand-100 p-4">
-            <div>
-              <p className="font-semibold">{t.service}</p>
-              {inv.service_date && (
-                <p className="text-sm text-brand-800">
-                  {t.serviceDate}: {new Date(inv.service_date).toLocaleDateString(locale)}
-                </p>
-              )}
+          {items.length > 0 ? (
+            items.map((it, i) => (
+              <div key={i} className="flex items-center justify-between border-b border-brand-100 p-4">
+                <div>
+                  <p className="font-semibold">{it.description}</p>
+                  {i === 0 && inv.service_date && (
+                    <p className="text-sm text-brand-800">
+                      {t.serviceDate}: {new Date(inv.service_date).toLocaleDateString(locale)}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xl font-semibold">{usd(it.amount)}</p>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-between border-b border-brand-100 p-4">
+              <div>
+                <p className="font-semibold">{t.service}</p>
+                {inv.service_date && (
+                  <p className="text-sm text-brand-800">
+                    {t.serviceDate}: {new Date(inv.service_date).toLocaleDateString(locale)}
+                  </p>
+                )}
+              </div>
+              <p className="text-xl font-semibold">{usd(inv.amount)}</p>
             </div>
-            <p className="text-xl font-semibold">{usd(inv.amount)}</p>
-          </div>
+          )}
           <div className="flex items-center justify-between bg-brand-50 p-4">
             <p className="text-xl font-bold text-brand-900">{t.total}</p>
             <p className="text-3xl font-bold text-brand-900">{usd(inv.amount)}</p>

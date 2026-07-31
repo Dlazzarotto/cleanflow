@@ -8,6 +8,7 @@ import LocationReporter from '@/components/LocationReporter';
 import IncidentForm from '@/components/IncidentForm';
 import AutoCloseWatcher from '@/components/AutoCloseWatcher';
 import DayControl from '@/components/DayControl';
+import ExtraServiceForm from '@/components/ExtraServiceForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ interface AgendaItem {
   id: string;
   client_id?: string | null;
   lockout_status?: string | null;
+  service_type?: string | null;
   scheduled_at: string;
   duration_minutes: number;
   status: BookingStatus;
@@ -60,6 +62,13 @@ export default async function MinhaAgendaPage() {
 
   // Visao segura: apenas limpezas das equipes do usuario, sem valores
   const { data: companyId } = await supabase.rpc('current_company_id');
+
+  // Visão sem valores: a equipe escolhe o serviço, nunca vê preço
+  const { data: catalogRows } = await supabase
+    .from('team_service_extras')
+    .select('id, name')
+    .order('name');
+  const catalog = (catalogRows ?? []).map((c: any) => ({ id: c.id, name: c.name }));
 
   const { data: openShiftId } = await supabase.rpc('my_open_shift');
   const { data: openShift } = openShiftId
@@ -151,6 +160,17 @@ export default async function MinhaAgendaPage() {
                     Duração prevista: {Math.floor(b.duration_minutes / 60)}h{b.duration_minutes % 60 > 0 ? ` ${b.duration_minutes % 60}min` : ''}
                     {b.team_name ? ` · ${b.team_name}` : ''}
                   </p>
+                  {b.service_type && b.service_type !== 'manutencao' && (
+                    <p className="mt-2 rounded-card bg-sun/20 p-2 font-medium text-brand-900">
+                      ✨ {b.service_type === 'primeira'
+                        ? 'Primeira limpeza — profunda, leva mais tempo'
+                        : b.service_type === 'pos_obra'
+                          ? 'Limpeza pós-obra'
+                          : b.service_type === 'mudanca'
+                            ? 'Limpeza de mudança'
+                            : 'Limpeza profunda (deep cleaning)'}
+                    </p>
+                  )}
                   {b.address && (
                     <p className="mt-1">
                       📍{' '}
@@ -200,6 +220,9 @@ export default async function MinhaAgendaPage() {
                         clientLng={b.lng}
                       />
                     </div>
+                  )}
+                  {openShift && b.status === 'em_andamento' && (
+                    <ExtraServiceForm bookingId={b.id} catalog={catalog} />
                   )}
                   {companyId && openShift && (
                     <IncidentForm

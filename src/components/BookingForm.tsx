@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { createBookingAction } from '@/lib/actions';
 import type { Suggestion } from '@/lib/types';
+import { SERVICE_TYPES } from '@/lib/pricing';
 
 interface Option {
   id: string;
@@ -69,6 +70,16 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
           </p>
         )}
       </div>
+      {tipo === 'limpeza' && (
+        <div>
+          <label className="label" htmlFor="service_type">Tipo de limpeza</label>
+          <select className="input" id="service_type" name="service_type" defaultValue="manutencao">
+            {SERVICE_TYPES.map((t) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label className="label" htmlFor="client_id">Cliente *</label>
         <select

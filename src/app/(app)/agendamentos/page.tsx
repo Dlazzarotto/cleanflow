@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
+import { SERVICE_TYPE_LABEL } from '@/lib/pricing';
 import { updateBookingStatusAction } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
@@ -94,6 +95,11 @@ export default async function AgendamentosPage() {
                   </p>
                   <p className="text-brand-800">{b.clients?.address}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {(b as any).service_type && (b as any).service_type !== 'manutencao' && (
+                      <span className="rounded-full bg-sun/20 px-3 py-1 text-sm font-medium text-brand-900">
+                        ✨ {SERVICE_TYPE_LABEL[(b as any).service_type]}
+                      </span>
+                    )}
                     {b.series_id && (
                       <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-800">
                         🔁 recorrente · {seriesCount} limpeza{seriesCount === 1 ? '' : 's'} à frente
