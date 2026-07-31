@@ -13,6 +13,7 @@ import {
 } from '@/lib/actions';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import InviteForm from '@/components/InviteForm';
+import ResetAccessButton from '@/components/ResetAccessButton';
 import type { Team } from '@/lib/types';
 import { maxTeams, planName, PLANS } from '@/lib/plans';
 
@@ -64,7 +65,8 @@ export default async function EquipesPage() {
         ) : (
           <div className="space-y-2">
             {memberList.map((m: any) => (
-              <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-brand-100 px-4 py-3">
+              <div key={m.id} className="rounded-card border border-brand-100 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className={`font-semibold ${!m.active ? 'line-through opacity-60' : ''}`}>{m.full_name}</p>
                   <p className="text-sm text-brand-800">{ROLE_LABEL[m.role] ?? m.role}{!m.active ? ' · acesso desativado' : ''}</p>
@@ -87,6 +89,10 @@ export default async function EquipesPage() {
                       {m.active ? 'Desativar acesso' : 'Reativar acesso'}
                     </button>
                   </form>
+                </div>
+                </div>
+                <div className="mt-2">
+                  <ResetAccessButton membershipId={m.id} personName={m.full_name} />
                 </div>
               </div>
             ))}

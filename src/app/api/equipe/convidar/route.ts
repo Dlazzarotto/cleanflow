@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { getAuth, isManager } from '@/lib/auth';
+import { accessEmailHtml, sendAccessEmail } from '@/lib/emails/acesso';
 
 /**
  * POST /api/equipe/convidar
@@ -136,10 +137,39 @@ export async function POST(request: Request) {
     }
   }
 
+  // 5) Email com os dados de acesso (best-effort)
+  let emailStatus: string | null = null;
+  if (createdNew) {
+    const { data: company } = await admin
+      .from('companies')
+      .select('name, email')
+      .eq('id', auth.companyId)
+      .single();
+    const companyName = company?.name ?? 'CleanFlow';
+    const origin = new URL(request.url).origin;
+
+    emailStatus = await sendAccessEmail({
+      to: email,
+      subject: `Seu acesso ao CleanFlow — ${companyName}`,
+      companyName,
+      replyTo: company?.email ?? null,
+      html: accessEmailHtml({
+        fullName,
+        companyName,
+        loginUrl: `${origin}/login`,
+        email,
+        password: (body as any)._password,
+        isReset: false,
+      }),
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     created_new_user: createdNew,
     temp_password: createdNew ? (body as any)._password : null,
+    email_sent: createdNew ? emailStatus === null : false,
+    email_error: emailStatus,
     message: createdNew
       ? 'Acesso criado. Anote a senha temporária e entregue à pessoa.'
       : alreadyLinked

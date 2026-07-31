@@ -15,7 +15,12 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
   const [teamId, setTeamId] = useState('');
   const [password, setPassword] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
-  const [result, setResult] = useState<{ message: string; temp_password?: string | null }>({ message: '' });
+  const [result, setResult] = useState<{
+    message: string;
+    temp_password?: string | null;
+    emailSent?: boolean;
+    emailError?: string | null;
+  }>({ message: '' });
 
   async function invite() {
     if (!email.trim() || !fullName.trim()) {
@@ -39,7 +44,12 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
       const data = await res.json();
       if (data.ok) {
         setState('done');
-        setResult({ message: data.message, temp_password: data.temp_password });
+        setResult({
+          message: data.message,
+          temp_password: data.temp_password,
+          emailSent: data.email_sent,
+          emailError: data.email_error,
+        });
         setEmail('');
         setFullName('');
         setPassword('');
@@ -99,6 +109,12 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
             <p className="mt-2">
               Senha temporária: <strong className="select-all">{result.temp_password}</strong> — anote agora, ela não será mostrada de novo.
             </p>
+          )}
+          {result.emailSent && (
+            <p className="mt-2 text-brand-700">✓ Email com os dados de acesso enviado.</p>
+          )}
+          {result.emailError && (
+            <p className="mt-2 text-brand-800">⚠️ {result.emailError}</p>
           )}
         </div>
       )}
