@@ -8,7 +8,7 @@ export default async function NovoAgendamentoPage() {
   await requireManager();
   const supabase = createClient();
   const [{ data: clients }, { data: teams }] = await Promise.all([
-    supabase.from('clients').select('id, full_name').in('status', ['ativo', 'em_espera']).order('full_name'),
+    supabase.from('clients').select('id, full_name, default_price').in('status', ['ativo', 'em_espera']).order('full_name'),
     supabase.from('teams').select('id, name').eq('active', true).order('name'),
   ]);
 
@@ -16,7 +16,11 @@ export default async function NovoAgendamentoPage() {
     <div className="max-w-2xl">
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Nova limpeza</h1>
       <BookingForm
-        clients={(clients ?? []).map((c) => ({ id: c.id, name: c.full_name }))}
+        clients={(clients ?? []).map((c) => ({
+          id: c.id,
+          name: c.full_name,
+          defaultPrice: (c as any).default_price,
+        }))}
         teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name }))}
       />
     </div>

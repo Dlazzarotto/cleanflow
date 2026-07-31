@@ -4,6 +4,7 @@ import { requireMarketingAccess } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { updateClientAction } from '@/lib/actions';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { PAYMENT_METHODS, CONTRACT_STATUS } from '@/lib/billing';
 import type { Client } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,39 @@ export default async function EditarClientePage({ params }: { params: { id: stri
           <label className="label" htmlFor="alarm_notes">Alarme</label>
           <input className="input" id="alarm_notes" name="alarm_notes" defaultValue={c.alarm_notes ?? ''} />
         </div>
+        {myRole !== 'marketing' && (
+          <div className="rounded-card bg-brand-50 p-4">
+            <p className="mb-3 font-semibold text-brand-900">💵 Cobrança e contrato</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="label" htmlFor="payment_method">Forma de pagamento</label>
+                <select className="input" id="payment_method" name="payment_method" defaultValue={(c as any).payment_method ?? ''}>
+                  <option value="">Definir</option>
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label" htmlFor="default_price">Valor por limpeza (USD)</label>
+                <input className="input" id="default_price" name="default_price" type="number" min={0} step={5} defaultValue={(c as any).default_price ?? ''} />
+              </div>
+              <div>
+                <label className="label" htmlFor="contract_status">Contrato</label>
+                <select className="input" id="contract_status" name="contract_status" defaultValue={(c as any).contract_status ?? 'pendente'}>
+                  {CONTRACT_STATUS.map((x) => (
+                    <option key={x.key} value={x.key}>{x.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="label" htmlFor="payment_notes">Observações de pagamento</label>
+              <input className="input" id="payment_notes" name="payment_notes" defaultValue={(c as any).payment_notes ?? ''} placeholder="Ex: Venmo @maria-silva · paga sempre no dia" />
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="label" htmlFor="preferences">Preferências de limpeza</label>
           <textarea className="input" id="preferences" name="preferences" rows={3} defaultValue={c.preferences ?? ''} />

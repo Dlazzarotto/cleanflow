@@ -6,6 +6,7 @@ import type { Suggestion } from '@/lib/types';
 interface Option {
   id: string;
   name: string;
+  defaultPrice?: number | null;
 }
 
 export default function BookingForm({ clients, teams }: { clients: Option[]; teams: Option[] }) {
@@ -15,12 +16,15 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
   const [teamId, setTeamId] = useState('');
   const [repeat, setRepeat] = useState('nao');
   const [tipo, setTipo] = useState('limpeza');
+  const [price, setPrice] = useState<number>(0);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestMessage, setSuggestMessage] = useState('');
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   async function handleClientChange(id: string) {
     setClientId(id);
+    const c = clients.find((x) => x.id === id);
+    if (c?.defaultPrice != null) setPrice(Number(c.defaultPrice));
     setSuggestions([]);
     setSuggestMessage('');
     if (!id) return;
@@ -146,7 +150,7 @@ export default function BookingForm({ clients, teams }: { clients: Option[]; tea
         </div>
         <div>
           <label className="label" htmlFor="price">Preço (USD)</label>
-          <input className="input" id="price" name="price" type="number" defaultValue={0} min={0} step={5} />
+          <input className="input" id="price" name="price" type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} min={0} step={5} />
         </div>
       </div>
 

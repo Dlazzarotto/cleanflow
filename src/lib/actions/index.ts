@@ -34,6 +34,10 @@ export async function createClientAction(formData: FormData) {
     status: String(formData.get('status') ?? 'ativo'),
     source: String(formData.get('source') ?? '') || null,
     entry_source: formData.get('from_marketing') === 'on' ? 'marketing' : 'organico',
+    payment_method: String(formData.get('payment_method') ?? '') || null,
+    default_price: String(formData.get('default_price') ?? '') === ''
+      ? null
+      : Number(formData.get('default_price')),
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -231,6 +235,12 @@ export async function updateClientAction(id: string, formData: FormData) {
       language: String(formData.get('language') ?? 'pt'),
       status: String(formData.get('status') ?? 'ativo'),
       source: String(formData.get('source') ?? '') || null,
+      payment_method: String(formData.get('payment_method') ?? '') || null,
+      default_price: String(formData.get('default_price') ?? '') === ''
+        ? null
+        : Number(formData.get('default_price')),
+      contract_status: String(formData.get('contract_status') ?? 'pendente'),
+      payment_notes: String(formData.get('payment_notes') ?? '') || null,
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
@@ -538,4 +548,26 @@ export async function createLeadAction(formData: FormData) {
   revalidatePath('/marketing');
   revalidatePath('/clientes');
   redirect('/marketing');
+}
+
+
+// ---------- REGULARIZACAO (pagamento, valor e contrato) ----------
+export async function quickUpdateClientBillingAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const id = String(formData.get('id'));
+  const preco = String(formData.get('default_price') ?? '');
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      payment_method: String(formData.get('payment_method') ?? '') || null,
+      default_price: preco === '' ? null : Number(preco),
+      contract_status: String(formData.get('contract_status') ?? 'pendente'),
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/regularizacao');
+  revalidatePath('/clientes');
+  revalidatePath(`/clientes/${id}`);
 }

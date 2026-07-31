@@ -60,6 +60,11 @@ export interface Client {
   marketing_opt_in: boolean;
   lost_reason: string | null;
   last_contact_at: string | null;
+  payment_method: string | null;
+  payment_notes: string | null;
+  default_price: number | null;
+  contract_status: 'pendente' | 'enviado' | 'assinado' | 'dispensado';
+  contract_signed_at: string | null;
   created_at: string;
 }
 

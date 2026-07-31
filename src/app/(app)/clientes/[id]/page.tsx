@@ -6,6 +6,7 @@ import { unbanClientAction } from '@/lib/actions';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/lib/types';
+import { PAYMENT_LABEL, CONTRACT_LABEL } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,13 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
     ['Pets', c.has_pets ? (c.pets_notes ?? 'Sim') : 'Não'],
     ['Produtos', c.products_notes],
     ['Frequência', c.frequency],
+    ...(isMkt
+      ? []
+      : ([
+          ['Forma de pagamento', c.payment_method ? PAYMENT_LABEL[c.payment_method] : null],
+          ['Valor por limpeza', c.default_price != null ? `$${Number(c.default_price).toFixed(0)}` : null],
+          ['Contrato', CONTRACT_LABEL[c.contract_status] ?? null],
+        ] as Array<[string, string | null]>)),
   ];
 
   return (

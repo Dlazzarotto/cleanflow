@@ -1,6 +1,7 @@
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { requireMarketingAccess } from '@/lib/auth';
 import { createClientAction } from '@/lib/actions';
+import { PAYMENT_METHODS } from '@/lib/billing';
 
 export default async function NovoClientePage() {
   const { role: myRole } = await requireMarketingAccess();
@@ -99,6 +100,24 @@ export default async function NovoClientePage() {
           <label className="label" htmlFor="alarm_notes">Alarme</label>
           <input className="input" id="alarm_notes" name="alarm_notes" placeholder="Ex: código 1234, desativar na entrada" />
         </div>
+        {myRole !== 'marketing' && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="payment_method">Forma de pagamento</label>
+              <select className="input" id="payment_method" name="payment_method" defaultValue="">
+                <option value="">Definir depois</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.key} value={m.key}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="default_price">Valor por limpeza (USD)</label>
+              <input className="input" id="default_price" name="default_price" type="number" min={0} step={5} />
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="label" htmlFor="preferences">Preferências de limpeza</label>
           <textarea className="input" id="preferences" name="preferences" rows={3}
