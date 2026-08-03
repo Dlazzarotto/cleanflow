@@ -1,13 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export default function CopyLinkButton({ slug }: { slug: string }) {
+export default function CopyLinkButton({
+  slug,
+  basePath = '/c',
+}: {
+  slug: string;
+  basePath?: string;
+}) {
   const [link, setLink] = useState('');
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
-    setLink(`${window.location.origin}/c/${slug}`);
-  }, [slug]);
+    setLink(`${window.location.origin}${basePath}/${slug}`);
+  }, [slug, basePath]);
 
   async function copiar() {
     try {

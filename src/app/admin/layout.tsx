@@ -19,6 +19,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin" className="flex min-h-touch items-center gap-3 px-5 py-3 hover:bg-brand-900 whitespace-nowrap">
             🏢 Empresas
           </Link>
+          <Link href="/admin/marketing" className="flex min-h-touch items-center gap-3 px-5 py-3 hover:bg-brand-900 whitespace-nowrap">
+            📣 Marketing
+          </Link>
           <Link href="/dashboard" className="flex min-h-touch items-center gap-3 px-5 py-3 hover:bg-brand-900 whitespace-nowrap">
             ↩︎ Ir para o app
           </Link>
