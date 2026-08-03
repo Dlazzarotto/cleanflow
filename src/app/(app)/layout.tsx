@@ -12,6 +12,7 @@ const MANAGER_NAV = [
   { href: '/faturas', label: 'Faturas', icon: '🧾' },
   { href: '/regularizacao', label: 'Regularização', icon: '✅' },
   { href: '/marketing', label: 'Marketing', icon: '📣' },
+  { href: '/campanhas', label: 'Campanhas', icon: '🔗' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
   { href: '/ocorrencias', label: 'Ocorrências', icon: '⚠️' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
@@ -22,6 +23,7 @@ const MANAGER_NAV = [
 
 const MARKETING_NAV = [
   { href: '/marketing', label: 'Meus leads', icon: '🌱' },
+  { href: '/campanhas', label: 'Minhas campanhas', icon: '🔗' },
   { href: '/marketing/novo', label: 'Cadastrar lead', icon: '➕' },
   { href: '/marketing/relatorio', label: 'Relatório', icon: '📊' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
@@ -50,6 +52,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .eq('company_id', companyId)
         .single()
     : { data: null };
+
+  // Registra a primeira entrada e a última atividade da pessoa
+  if (companyId) {
+    await supabase.rpc('touch_my_membership');
+  }
 
   const accountStatus = (membership as any)?.companies?.account_status ?? 'ativa';
   if (accountStatus === 'suspensa' || accountStatus === 'cancelada') {

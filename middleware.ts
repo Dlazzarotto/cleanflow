@@ -33,7 +33,8 @@ export async function middleware(request: NextRequest) {
   const isApi = request.nextUrl.pathname.startsWith('/api');
   const isPublic =
     request.nextUrl.pathname.startsWith('/termos') ||
-    request.nextUrl.pathname.startsWith('/fatura/');
+    request.nextUrl.pathname.startsWith('/fatura/') ||
+    request.nextUrl.pathname.startsWith('/c/');
 
   if (!user && !isLogin && !isApi && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url));
