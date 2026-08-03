@@ -6,6 +6,9 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
 import { planName, maxTeams, monthlyFee } from '@/lib/plans';
 import EmailDiagnostic from '@/components/EmailDiagnostic';
+import ReminderPanel from '@/components/ReminderPanel';
+import SmsDiagnostic from '@/components/SmsDiagnostic';
+import { saveReminderSettingsAction } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,12 +23,15 @@ export default async function ConfiguracoesPage() {
   const { supabase, userId, companyId, role, fullName } = await getAuth();
   const manager = isManager(role);
 
-  const [{ data: settings }, { data: company }, { data: authUser }] = await Promise.all([
+  const [{ data: settings }, { data: company }, { data: authUser }, { data: msgSettings }] = await Promise.all([
     supabase.from('user_settings').select('locale').eq('user_id', userId).single(),
     manager
       ? supabase.from('companies').select('name, phone, email, address, lat, lng, plan, extra_teams, monthly_fee, account_status, next_due_date, payment_instructions').eq('id', companyId).single()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
+    manager
+      ? supabase.from('pricing_settings').select('reminder_enabled, reminder_extra_note, reminder_channel').eq('company_id', companyId).single()
+      : Promise.resolve({ data: null }),
   ]);
 
   const locale = (settings as any)?.locale ?? 'pt';
@@ -71,6 +77,51 @@ export default async function ConfiguracoesPage() {
           <button className="btn-ghost" type="submit">Salvar idioma</button>
         </form>
       </div>
+
+      {manager && (
+        <div className="card space-y-3">
+          <h2 className="text-xl font-semibold text-brand-900">📨 Mensagens automáticas ao cliente</h2>
+          <div className="rounded-card bg-brand-50 p-4 text-brand-800">
+            <p><strong>Lembrete de véspera</strong> — enviado automaticamente todos os dias por mensagem de texto, sem precisar de nenhuma ação, para os clientes com limpeza no dia seguinte. Informa apenas a data, sem horário de chegada.</p>
+            <p className="mt-2"><strong>Conclusão + fatura</strong> — enviada por SMS quando a equipe faz o check-out, com o link para o cliente ver e pagar.</p>
+            <p className="mt-2 text-sm">Se o cliente não tiver telefone, ou o SMS falhar, o sistema envia por email automaticamente.</p>
+          </div>
+
+          <form action={saveReminderSettingsAction} className="space-y-3">
+            <input type="hidden" name="reminder_enabled" value="on" />
+            <div>
+              <label className="label" htmlFor="reminder_channel">Como enviar</label>
+              <select
+                className="input"
+                id="reminder_channel"
+                name="reminder_channel"
+                defaultValue={(msgSettings as any)?.reminder_channel ?? 'sms'}
+              >
+                <option value="sms">📱 Mensagem de texto (SMS)</option>
+                <option value="ambos">📱 + ✉️ SMS e email</option>
+                <option value="email">✉️ Somente email</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="reminder_extra_note">
+                Recado extra no lembrete (opcional)
+              </label>
+              <input
+                className="input"
+                id="reminder_extra_note"
+                name="reminder_extra_note"
+                defaultValue={(msgSettings as any)?.reminder_extra_note ?? ''}
+                placeholder="Ex: nesta semana chegaremos 30 minutos mais tarde por causa do feriado"
+              />
+            </div>
+            <button className="btn-ghost" type="submit">Salvar preferências</button>
+          </form>
+
+          <ReminderPanel />
+        </div>
+      )}
+
+      {manager && <SmsDiagnostic />}
 
       {manager && <EmailDiagnostic />}
 

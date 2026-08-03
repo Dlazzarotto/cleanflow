@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { INVOICE_I18N } from '@/lib/i18n/invoice';
 import { normalizeLang } from '@/lib/i18n/documents';
 import { sendAccessEmail } from '@/lib/emails/acesso';
+import { sendSms, toE164 } from '@/lib/sms';
+import { SMS_I18N } from '@/lib/i18n/sms';
 
 /**
  * POST /api/faturas/enviar { invoice_id? , booking_id? }
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
 
   let query = supabase
     .from('invoices')
-    .select('*, clients(full_name, email, language), companies(name, phone, email)')
+    .select('*, clients(full_name, email, phone, language, sms_opt_in), companies(name, phone, email)')
     .limit(1);
   if (body.invoice_id) query = query.eq('id', body.invoice_id);
   else if (body.booking_id) query = query.eq('booking_id', body.booking_id);
@@ -35,9 +37,11 @@ export async function POST(request: Request) {
 
   const inv = data as any;
   const to = inv.clients?.email;
-  if (!to) {
+  const telefone = toE164(inv.clients?.phone);
+
+  if (!to && !telefone) {
     return NextResponse.json(
-      { error: 'Este cliente não tem email cadastrado. Adicione na ficha para enviar a fatura.' },
+      { error: 'Este cliente não tem telefone nem email cadastrado. Adicione na ficha para enviar a fatura.' },
       { status: 400 }
     );
   }
@@ -75,20 +79,68 @@ export async function POST(request: Request) {
     </div>
   </div>`;
 
-  const erro = await sendAccessEmail({
-    to,
-    subject: t.emailSubject(inv.number, companyName),
-    html,
-    companyName,
-    replyTo: inv.companies?.email ?? null,
-  });
+  // Canal preferido da empresa
+  const { data: cfg } = await supabase
+    .from('pricing_settings')
+    .select('reminder_channel')
+    .eq('company_id', inv.company_id)
+    .single();
+  const canal = cfg?.reminder_channel ?? 'sms';
 
-  if (erro) return NextResponse.json({ error: erro }, { status: 502 });
+  let enviouSms = false;
+  let erroSms: string | null = null;
+
+  if ((canal === 'sms' || canal === 'ambos') && telefone && inv.clients?.sms_opt_in !== false) {
+    erroSms = await sendSms(
+      telefone,
+      SMS_I18N[lang].invoice({
+        company: companyName,
+        name: (inv.clients?.full_name ?? '').split(' ')[0],
+        amount: valor,
+        link,
+      })
+    );
+    enviouSms = erroSms === null;
+  }
+
+  let erro: string | null = null;
+  const precisaEmail = canal === 'email' || canal === 'ambos' || (canal === 'sms' && !enviouSms);
+  if (precisaEmail && to) {
+    erro = await sendAccessEmail({
+      to,
+      subject: t.emailSubject(inv.number, companyName),
+      html,
+      companyName,
+      replyTo: inv.companies?.email ?? null,
+    });
+  }
+
+  if (!enviouSms && erro) {
+    return NextResponse.json({ error: erroSms ?? erro }, { status: 502 });
+  }
+  if (!enviouSms && !to) {
+    return NextResponse.json({ error: erroSms ?? 'Não foi possível enviar.' }, { status: 502 });
+  }
 
   await supabase
     .from('invoices')
-    .update({ sent_at: new Date().toISOString(), email_to: to })
+    .update({ sent_at: new Date().toISOString(), email_to: enviouSms ? telefone : to })
     .eq('id', inv.id);
 
-  return NextResponse.json({ ok: true, to });
+  // Histórico de mensagens ao cliente (best-effort)
+  try {
+    await supabase.from('client_messages').insert({
+      company_id: inv.company_id,
+      client_id: inv.client_id,
+      booking_id: inv.booking_id,
+      kind: 'fatura',
+      channel: enviouSms ? 'sms' : 'email',
+      sent_to: enviouSms ? telefone : to,
+      status: 'enviado',
+    });
+  } catch {
+    // ignora duplicidade
+  }
+
+  return NextResponse.json({ ok: true, to: enviouSms ? telefone : to, canal: enviouSms ? 'SMS' : 'email' });
 }

@@ -242,6 +242,7 @@ export async function updateClientAction(id: string, formData: FormData) {
         : Number(formData.get('default_price')),
       contract_status: String(formData.get('contract_status') ?? 'pendente'),
       payment_notes: String(formData.get('payment_notes') ?? '') || null,
+      sms_opt_in: formData.get('sms_opt_in') === 'on',
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
@@ -572,4 +573,22 @@ export async function quickUpdateClientBillingAction(formData: FormData) {
   revalidatePath('/regularizacao');
   revalidatePath('/clientes');
   revalidatePath(`/clientes/${id}`);
+}
+
+
+// ---------- MENSAGENS AUTOMATICAS ----------
+export async function saveReminderSettingsAction(formData: FormData) {
+  const { supabase, companyId, role } = await getAuth();
+  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+    throw new Error('Apenas a gestão altera as mensagens automáticas');
+  }
+
+  const { error } = await supabase.from('pricing_settings').upsert({
+    company_id: companyId,
+    reminder_enabled: true,
+    reminder_channel: String(formData.get('reminder_channel') ?? 'sms'),
+    reminder_extra_note: String(formData.get('reminder_extra_note') ?? '') || null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/configuracoes');
 }
