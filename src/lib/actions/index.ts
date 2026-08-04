@@ -308,7 +308,7 @@ export async function updateMyBookingStatusAction(
   lng: number | null,
   accuracy: number | null = null
 ) {
-  const supabase = createClient();
+  const { supabase } = await getAuth();
   const { error } = await supabase.rpc('set_my_booking_status', {
     p_booking: bookingId,
     p_status: status,
