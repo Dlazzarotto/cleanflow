@@ -25,14 +25,61 @@ const DESTINO: Record<string, string> = {
  */
 export default async function HealthPanel() {
   const supabase = createClient();
-  const { data } = await supabase.rpc('operation_health');
+  const [{ data }, { data: abertas }] = await Promise.all([
+    supabase.rpc('operation_health'),
+    supabase
+      .from('bookings')
+      .select('id, scheduled_at, duration_minutes, clients(full_name), teams(name)')
+      .eq('status', 'em_andamento')
+      .order('scheduled_at'),
+  ]);
+
   const itens = (data ?? []) as any[];
-  if (itens.length === 0) return null;
+
+  // Limpezas que passaram bem do tempo previsto — equipe pode ter esquecido o check-out
+  const esquecidas = ((abertas ?? []) as any[]).filter((b) => {
+    const fimPrevisto = new Date(b.scheduled_at).getTime() + (b.duration_minutes + 90) * 60000;
+    return Date.now() > fimPrevisto;
+  });
+
+  if (itens.length === 0 && esquecidas.length === 0) return null;
 
   const altas = itens.filter((i) => i.gravidade === 'alta');
   const medias = itens.filter((i) => i.gravidade !== 'alta');
 
   return (
+    <>
+    {esquecidas.length > 0 && (
+      <div className="card mb-6 border-2 border-sun">
+        <p className="mb-1 text-xl font-semibold text-brand-900">
+          ⏰ Limpezas sem check-out
+        </p>
+        <p className="mb-3 text-brand-800">
+          Passaram do tempo previsto e continuam abertas. Pode ser esquecimento da equipe — a fatura
+          só nasce depois do check-out.
+        </p>
+        <div className="space-y-2">
+          {esquecidas.map((b: any) => (
+            <div key={b.id} className="rounded-card bg-sun/15 p-3">
+              <span className="font-medium text-brand-900">
+                {b.clients?.full_name ?? 'Limpeza'}
+              </span>
+              <span className="block text-sm text-brand-800">
+                {b.teams?.name ? `${b.teams.name} · ` : ''}
+                começou {new Date(b.scheduled_at).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {itens.length > 0 && (
     <div className="card mb-6 border-2 border-sun">
       <p className="mb-1 text-xl font-semibold text-brand-900">
         🔧 Ajustes que evitam problemas em campo
@@ -62,5 +109,7 @@ export default async function HealthPanel() {
         <p className="mt-2 text-sm text-brand-800">e mais {itens.length - 12} item(ns).</p>
       )}
     </div>
+    )}
+    </>
   );
 }

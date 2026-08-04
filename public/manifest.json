@@ -1,0 +1,14 @@
+{
+  "name": "CleanFlow",
+  "short_name": "CleanFlow",
+  "description": "Gestão para empresas de limpeza",
+  "start_url": "/minha-agenda",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#083A38",
+  "theme_color": "#083A38",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

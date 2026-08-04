@@ -9,6 +9,8 @@ import IncidentForm from '@/components/IncidentForm';
 import AutoCloseWatcher from '@/components/AutoCloseWatcher';
 import DayControl from '@/components/DayControl';
 import ExtraServiceForm from '@/components/ExtraServiceForm';
+import KeepAwake from '@/components/KeepAwake';
+import InstallPrompt from '@/components/InstallPrompt';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +104,8 @@ export default async function MinhaAgendaPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <InstallPrompt />
+      <KeepAwake ativo={items.some((b) => b.status === 'em_andamento')} />
       <LocationReporter />
       <AutoCloseWatcher
         active={items
@@ -116,6 +120,24 @@ export default async function MinhaAgendaPage() {
       />
       <ArrivalWatcher targets={arrivalTargets} />
       <h1 className="mb-4 text-3xl font-bold text-brand-900">Minha agenda</h1>
+
+      {items
+        .filter((b) => {
+          if (b.status !== 'em_andamento') return false;
+          const inicio = new Date(b.scheduled_at).getTime();
+          return Date.now() - inicio > (b.duration_minutes + 60) * 60000;
+        })
+        .map((b) => (
+          <div key={`aviso-${b.id}`} className="mb-4 rounded-card border-2 border-sun bg-white p-4">
+            <p className="font-semibold text-brand-900">
+              ⏰ A limpeza de {b.client_name} continua em andamento
+            </p>
+            <p className="mt-1 text-sm text-brand-800">
+              Já passou do tempo previsto. Se você terminou, faça o check-out — a fatura só é gerada
+              depois disso.
+            </p>
+          </div>
+        ))}
 
       <DayControl
         openShift={openShift as { started_at: string } | null}
