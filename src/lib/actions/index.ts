@@ -38,6 +38,7 @@ export async function createClientAction(formData: FormData) {
     default_price: String(formData.get('default_price') ?? '') === ''
       ? null
       : Number(formData.get('default_price')),
+    preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -131,12 +132,13 @@ export async function updateBookingAction(input: {
   price: number;
   team_id: string | null;
   status: string;
+  frequency?: string | null;   // muda o intervalo da série
 }) {
   const { supabase } = await getCompanyId();
 
   const { data: current, error: fetchError } = await supabase
     .from('bookings')
-    .select('id, series_id, scheduled_at')
+    .select('id, series_id, scheduled_at, client_id')
     .eq('id', input.id)
     .single();
   if (fetchError || !current) throw new Error('Limpeza não encontrada');
@@ -149,22 +151,55 @@ export async function updateBookingAction(input: {
     status: input.status,
   };
 
+  // Dias entre uma limpeza e a seguinte
+  const PASSO: Record<string, number> = {
+    semanal: 7,
+    quinzenal: 14,
+    tres_semanas: 21,
+    mensal: 28,
+  };
+
   if (input.scope === 'series' && current.series_id) {
-    const deltaMs = newStart.getTime() - new Date(current.scheduled_at).getTime();
     const { data: futureOnes, error: listError } = await supabase
       .from('bookings')
       .select('id, scheduled_at')
       .eq('series_id', current.series_id)
-      .gte('scheduled_at', current.scheduled_at);
+      .gte('scheduled_at', current.scheduled_at)
+      .order('scheduled_at');
     if (listError) throw new Error(listError.message);
 
-    for (const b of futureOnes ?? []) {
-      const shifted = new Date(new Date(b.scheduled_at).getTime() + deltaMs);
-      const { error } = await supabase
-        .from('bookings')
-        .update({ ...patchCommon, scheduled_at: shifted.toISOString() })
-        .eq('id', b.id);
-      if (error) throw new Error(error.message);
+    const lista = futureOnes ?? [];
+    const passo = input.frequency ? PASSO[input.frequency] : undefined;
+
+    if (passo) {
+      // Frequência mudou: recalcula as datas a partir desta limpeza
+      for (let i = 0; i < lista.length; i++) {
+        const dia = new Date(newStart.getTime() + i * passo * 86400000);
+        const { error } = await supabase
+          .from('bookings')
+          .update({ ...patchCommon, scheduled_at: dia.toISOString() })
+          .eq('id', lista[i].id);
+        if (error) throw new Error(error.message);
+      }
+
+      // O cliente passa a ter a nova frequência
+      if (current.client_id) {
+        await supabase
+          .from('clients')
+          .update({ frequency: input.frequency })
+          .eq('id', current.client_id);
+      }
+    } else {
+      // Mantém o intervalo: desloca todas pelo mesmo tanto
+      const deltaMs = newStart.getTime() - new Date(current.scheduled_at).getTime();
+      for (const b of lista) {
+        const shifted = new Date(new Date(b.scheduled_at).getTime() + deltaMs);
+        const { error } = await supabase
+          .from('bookings')
+          .update({ ...patchCommon, scheduled_at: shifted.toISOString() })
+          .eq('id', b.id);
+        if (error) throw new Error(error.message);
+      }
     }
   } else {
     const { error } = await supabase
@@ -178,6 +213,7 @@ export async function updateBookingAction(input: {
   revalidatePath('/calendario');
   revalidatePath('/dashboard');
 }
+
 
 /**
  * Cancela uma limpeza (ou esta e as próximas da série).
@@ -243,6 +279,8 @@ export async function updateClientAction(id: string, formData: FormData) {
       contract_status: String(formData.get('contract_status') ?? 'pendente'),
       payment_notes: String(formData.get('payment_notes') ?? '') || null,
       sms_opt_in: formData.get('sms_opt_in') === 'on',
+      marketing_opt_in: formData.get('marketing_opt_in') === 'on',
+      preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null,
     })
     .eq('id', id);
   if (error) throw new Error(error.message);

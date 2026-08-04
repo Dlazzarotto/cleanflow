@@ -264,6 +264,7 @@ function EditModal({
   const [price, setPrice] = useState(Number(booking.price));
   const [teamId, setTeamId] = useState(booking.team_id ?? '');
   const [status, setStatus] = useState<BookingStatus>(booking.status);
+  const [frequencia, setFrequencia] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
@@ -283,6 +284,7 @@ function EditModal({
         price,
         team_id: teamId || null,
         status,
+        frequency: escopo === 'series' && frequencia ? frequencia : null,
       });
       onSaved();
     } catch {
@@ -360,6 +362,31 @@ function EditModal({
               ))}
             </select>
           </div>
+          {emSerie && (
+            <div className="rounded-card bg-brand-50 p-4">
+              <label className="label" htmlFor="edit-freq">
+                Frequência das próximas limpezas
+              </label>
+              <select
+                className="input"
+                id="edit-freq"
+                value={frequencia}
+                onChange={(e) => setFrequencia(e.target.value)}
+              >
+                <option value="">Manter como está</option>
+                <option value="semanal">Semanal — toda semana</option>
+                <option value="quinzenal">Quinzenal — a cada 2 semanas</option>
+                <option value="tres_semanas">A cada 3 semanas</option>
+                <option value="mensal">Mensal — a cada 4 semanas</option>
+              </select>
+              <p className="mt-1 text-sm text-brand-800">
+                {frequencia
+                  ? 'As próximas limpezas serão reagendadas com o novo intervalo, a partir da data acima. Vale ao usar "Mudar esta e as próximas".'
+                  : 'Mantendo, as próximas apenas acompanham a mudança de data e horário.'}
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="label" htmlFor="edit-status">Status</label>
             <select className="input" id="edit-status" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus)}>
@@ -387,7 +414,11 @@ function EditModal({
                   onClick={() => save('series')}
                   disabled={saving}
                 >
-                  {saving ? 'Salvando…' : '🔁 Mudar esta e as próximas'}
+                  {saving
+                    ? 'Salvando…'
+                    : frequencia
+                      ? '🔁 Mudar esta e reagendar as próximas'
+                      : '🔁 Mudar esta e as próximas'}
                 </button>
               </>
             ) : (
