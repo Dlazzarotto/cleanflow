@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireMarketingAccess } from '@/lib/auth';
 import { CLIENT_STATUS_LABEL, type Client, type ClientStatus } from '@/lib/types';
 import { setMarketingOptInAction, saveLostReasonAction, markContactedAction } from '@/lib/actions';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,7 @@ export default async function MarketingPage({
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">
           {myRole === 'marketing' ? '🌱 Meus leads' : '📣 Marketing'}

@@ -5,6 +5,7 @@ import { markInvoicePaidAction, setInvoiceStatusAction, refreshOverdueAction } f
 import { PAYMENT_METHODS, PAYMENT_LABEL } from '@/lib/billing';
 import SendInvoiceButton from '@/components/SendInvoiceButton';
 import {
+import BackLink from '@/components/BackLink';
   decideExtraAction,
   createExtraCatalogAction,
   updateExtraCatalogAction,
@@ -77,6 +78,7 @@ export default async function FaturasPage({
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-2 text-3xl font-bold text-brand-900">🧾 Faturas</h1>
       <p className="mb-6 text-brand-800">
         Cada limpeza concluída gera a fatura automaticamente. Envie ao cliente por email e dê baixa

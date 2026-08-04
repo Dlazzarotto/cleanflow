@@ -3,6 +3,7 @@ import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import EstimateForm, { type EstimateInitial } from '@/components/EstimateForm';
 import { getPricingSettings } from '@/lib/actions/estimates';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ export default async function EditarEstimatePage({ params }: { params: { id: str
 
   return (
     <div>
+      <BackLink href="/estimates" label="Estimates" />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Editar estimate</h1>
       <EstimateForm
         clients={(clients ?? []).map((c) => ({

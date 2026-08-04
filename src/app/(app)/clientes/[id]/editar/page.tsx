@@ -6,6 +6,7 @@ import { updateClientAction } from '@/lib/actions';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { PAYMENT_METHODS, CONTRACT_STATUS } from '@/lib/billing';
 import type { Client } from '@/lib/types';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,7 @@ export default async function EditarClientePage({ params }: { params: { id: stri
 
   return (
     <div className="max-w-2xl">
+      <BackLink href={`/clientes/${c.id}`} label={c.full_name} />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Editar cliente</h1>
       <form action={updateClientAction.bind(null, c.id)} className="card space-y-4">
         <div>

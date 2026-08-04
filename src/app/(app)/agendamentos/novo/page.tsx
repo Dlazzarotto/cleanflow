@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import BookingForm from '@/components/BookingForm';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ export default async function NovoAgendamentoPage() {
 
   return (
     <div className="max-w-2xl">
+      <BackLink href="/agendamentos" label="Agendamentos" />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Nova limpeza</h1>
       <BookingForm
         clients={(clients ?? []).map((c) => ({

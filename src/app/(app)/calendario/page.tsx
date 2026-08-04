@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import Calendar from '@/components/Calendar';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ export default async function CalendarioPage() {
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Calendário</h1>
       <Calendar teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name }))} />
     </div>

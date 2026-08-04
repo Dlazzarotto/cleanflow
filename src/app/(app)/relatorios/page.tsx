@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireManager } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { COMPANY_TZ } from '@/lib/tz';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,6 +188,7 @@ export default async function RelatoriosPage({
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Relatórios gerenciais</h1>
         <div className="flex gap-2">

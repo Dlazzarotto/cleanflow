@@ -16,6 +16,7 @@ import InviteForm from '@/components/InviteForm';
 import ResetAccessButton from '@/components/ResetAccessButton';
 import type { Team } from '@/lib/types';
 import { maxTeams, planName, PLANS } from '@/lib/plans';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export default async function EquipesPage() {
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
-      .select('id, user_id, full_name, role, active, position_id')
+      .select('id, user_id, full_name, role, active, position_id, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
       .eq('company_id', companyId)
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
@@ -55,7 +56,93 @@ export default async function EquipesPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="text-3xl font-bold text-brand-900">Equipes e acessos</h1>
+
+      {/* Acompanhamento dos acessos */}
+      <div className="card">
+        <h2 className="mb-1 text-xl font-semibold text-brand-900">📋 Situação dos acessos</h2>
+        <p className="mb-3 text-brand-800">
+          Acompanhe quem recebeu o convite, quem abriu o email e quem já entrou no sistema.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-brand-100 text-sm text-brand-800">
+                <th className="py-2">Pessoa</th>
+                <th className="py-2">✉️ Convite enviado</th>
+                <th className="py-2">👁️ Abriu o email</th>
+                <th className="py-2">✅ Entrou no sistema</th>
+                <th className="py-2">Último acesso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {memberList.map((m: any) => (
+                <tr key={m.id} className="border-b border-brand-100 last:border-0">
+                  <td className="py-3">
+                    <p className="font-medium">{m.full_name}</p>
+                    <p className="text-sm text-brand-800">
+                      {ROLE_LABEL[m.role] ?? m.role}
+                      {!m.active && ' · desativado'}
+                    </p>
+                  </td>
+                  <td className="py-3">
+                    {m.invite_sent_at ? (
+                      <span className="text-brand-900">
+                        {new Date(m.invite_sent_at).toLocaleDateString('pt-BR')}
+                        {m.invite_sent_to && (
+                          <span className="block text-sm text-brand-800">{m.invite_sent_to}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-sun/20 px-3 py-1 text-sm font-medium text-brand-900">
+                        não enviado
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3">
+                    {m.invite_opened_at ? (
+                      <span className="text-brand-700">
+                        {new Date(m.invite_opened_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    ) : m.invite_sent_at ? (
+                      <span className="text-brand-800">aguardando</span>
+                    ) : (
+                      <span className="text-brand-800">—</span>
+                    )}
+                  </td>
+                  <td className="py-3">
+                    {m.first_login_at ? (
+                      <span className="font-medium text-brand-700">
+                        ✓ {new Date(m.first_login_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-sun/20 px-3 py-1 text-sm font-medium text-brand-900">
+                        ainda não entrou
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 text-sm text-brand-800">
+                    {m.last_seen_at
+                      ? new Date(m.last_seen_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-sm text-brand-800">
+          A leitura do email depende do aplicativo da pessoa carregar imagens — alguns bloqueiam por
+          padrão, então &quot;aguardando&quot; não significa necessariamente que ela não viu. O que
+          confirma de verdade é a coluna &quot;Entrou no sistema&quot;.
+        </p>
+      </div>
 
       {/* Pessoas com acesso */}
       <div className="card">

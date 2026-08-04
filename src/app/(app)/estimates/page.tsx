@@ -5,6 +5,7 @@ import { formatMinutes } from '@/lib/pricing';
 import EmailButton from '@/components/EmailButton';
 import RecurrenceFromEstimate from '@/components/RecurrenceFromEstimate';
 import {
+import BackLink from '@/components/BackLink';
   getPricingSettings,
   savePricingSettingsAction,
   updateEstimateStatusAction,
@@ -41,6 +42,7 @@ export default async function EstimatesPage() {
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Estimates</h1>
         <Link href="/estimates/novo" className="btn-primary">+ Novo estimate</Link>

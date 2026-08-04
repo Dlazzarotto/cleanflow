@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/lib/types';
 import { PAYMENT_LABEL, CONTRACT_LABEL } from '@/lib/billing';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
 
   return (
     <div className="max-w-3xl">
+      <BackLink href="/clientes" label="Clientes" />
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">{c.full_name}</h1>
         <Link href={`/clientes/${c.id}/editar`} className="btn-ghost">✏️ Editar</Link>

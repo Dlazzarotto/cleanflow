@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import { CLIENT_STATUS_LABEL, type Client, type ClientStatus } from '@/lib/types';
 import GeocodeBatch from '@/components/GeocodeBatch';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ export default async function ClientesPage({
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Clientes</h1>
         <Link href="/clientes/novo" className="btn-primary">

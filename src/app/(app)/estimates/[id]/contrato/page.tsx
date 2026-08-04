@@ -6,6 +6,7 @@ import { buildServiceList } from '@/lib/estimate-view';
 import { getPricingSettings } from '@/lib/actions/estimates';
 import { CONTRACT_I18N, FREQ, normalizeLang } from '@/lib/i18n/documents';
 import PrintButton from '@/components/PrintButton';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,7 @@ export default async function ContratoPage({ params }: { params: { id: string } 
 
   return (
     <div className="mx-auto max-w-3xl">
+      <BackLink href="/estimates" label="Estimates" />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <h1 className="text-2xl font-bold text-brand-900">Contrato ({lang.toUpperCase()})</h1>
         <PrintButton />

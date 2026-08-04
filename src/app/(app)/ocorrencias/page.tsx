@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import { resolveIncidentAction, decideLockoutAction } from '@/lib/actions/incidents';
 import { getPricingSettings } from '@/lib/actions/estimates';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,7 @@ export default async function OcorrenciasPage({
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-2 text-3xl font-bold text-brand-900">⚠️ Ocorrências</h1>
       <p className="mb-6 text-brand-800">
         Registros feitos pela equipe em campo, com data, hora e autor. O relato original não pode ser

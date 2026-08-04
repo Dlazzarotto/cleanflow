@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireMarketingAccess, isManager } from '@/lib/auth';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,6 +106,7 @@ export default async function RelatorioMarketingPage({
 
   return (
     <div>
+      <BackLink href="/marketing" label="Marketing" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">
           {verValores ? '📊 Relatório de marketing' : '📊 Meu relatório'}

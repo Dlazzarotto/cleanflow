@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { requireMarketingAccess } from '@/lib/auth';
 import { createLeadAction } from '@/lib/actions';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ export default async function NovoLeadPage() {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/marketing" className="text-brand-700 underline">← Meus leads</Link>
+      <BackLink href="/marketing" label="Meus leads" />
       <h1 className="mb-1 mt-3 text-3xl font-bold text-brand-900">🌱 Cadastrar lead</h1>
       <p className="mb-6 text-brand-800">
         Registre o contato de quem demonstrou interesse. A gestão cuida do orçamento e do

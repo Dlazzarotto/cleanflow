@@ -4,6 +4,7 @@ import { requireManager } from '@/lib/auth';
 import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
 import { SERVICE_TYPE_LABEL } from '@/lib/pricing';
 import { updateBookingStatusAction } from '@/lib/actions';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +69,7 @@ export default async function AgendamentosPage() {
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Agendamentos</h1>
         <Link href="/agendamentos/novo" className="btn-primary">+ Nova limpeza</Link>

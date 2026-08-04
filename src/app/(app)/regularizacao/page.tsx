@@ -5,6 +5,7 @@ import { PAYMENT_LABEL, CONTRACT_LABEL } from '@/lib/billing';
 import { quickUpdateClientBillingAction } from '@/lib/actions';
 import { PAYMENT_METHODS, CONTRACT_STATUS } from '@/lib/billing';
 import type { Client } from '@/lib/types';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,7 @@ export default async function RegularizacaoPage() {
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-2 text-3xl font-bold text-brand-900">✅ Regularização de clientes</h1>
       <p className="mb-6 text-brand-800">
         Clientes ativos que ainda não estão no formato novo: sem forma de pagamento definida, sem

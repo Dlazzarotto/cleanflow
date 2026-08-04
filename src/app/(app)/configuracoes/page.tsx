@@ -9,6 +9,7 @@ import EmailDiagnostic from '@/components/EmailDiagnostic';
 import ReminderPanel from '@/components/ReminderPanel';
 import SmsDiagnostic from '@/components/SmsDiagnostic';
 import { saveReminderSettingsAction } from '@/lib/actions';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,7 @@ export default async function ConfiguracoesPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="text-3xl font-bold text-brand-900">⚙️ Configurações</h1>
 
       {/* Minha conta */}

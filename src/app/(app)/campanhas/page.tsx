@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireMarketingAccess, isManager } from '@/lib/auth';
 import { createCampaignAction, updateCampaignAction } from '@/lib/actions/campaigns';
 import CopyLinkButton from '@/components/CopyLinkButton';
+import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +44,7 @@ export default async function CampanhasPage() {
 
   return (
     <div>
+      <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-2 text-3xl font-bold text-brand-900">🔗 Campanhas e links</h1>
       <p className="mb-6 text-brand-800">
         Cada campanha tem um link próprio. Quem clica é contado, quem preenche vira lead, e quando
