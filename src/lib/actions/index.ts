@@ -302,20 +302,23 @@ export async function setMembershipActiveAction(membershipId: string, active: bo
 
 // ---------- STATUS PELA EQUIPE (via funcao segura, sem acesso a valores) ----------
 export async function updateMyBookingStatusAction(
-  id: string,
+  bookingId: string,
   status: string,
-  lat?: number | null,
-  lng?: number | null
+  lat: number | null,
+  lng: number | null,
+  accuracy: number | null = null
 ) {
-  const { supabase } = await getCompanyId();
+  const supabase = createClient();
   const { error } = await supabase.rpc('set_my_booking_status', {
-    p_booking: id,
+    p_booking: bookingId,
     p_status: status,
-    p_lat: lat ?? null,
-    p_lng: lng ?? null,
+    p_lat: lat,
+    p_lng: lng,
+    p_accuracy: accuracy,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/minha-agenda');
+  revalidatePath('/agendamentos');
 }
 
 

@@ -5,7 +5,7 @@ import { updateMyBookingStatusAction } from '@/lib/actions';
 import { distanceMeters, getPosition } from '@/lib/geo';
 
 /** Raio aceito para check-in e check-out. */
-const WORK_RADIUS = 100;
+const WORK_RADIUS = 250;
 
 export default function CheckinButton({
   bookingId,
@@ -31,27 +31,30 @@ export default function CheckinButton({
     setError('');
     const pos = await getPosition();
 
-    if (precisaEstarNaCasa) {
-      if (!pos) {
-        setError('Ative o GPS e permita o acesso à localização para registrar aqui.');
+    // Sem GPS o registro acontece mesmo assim: o trabalho não pode parar.
+    // A ausência de localização fica visível para a gestão.
+    if (precisaEstarNaCasa && pos && clientLat != null && clientLng != null) {
+      const dist = distanceMeters(pos.lat, pos.lng, clientLat, clientLng);
+      // Tolerância considera o erro que o próprio aparelho informa
+      const limite = WORK_RADIUS + Math.min(pos.accuracy ?? 0, 250);
+      if (dist > limite) {
+        setError(
+          `Você está a ${dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : dist + ' m'} da casa. ` +
+            `O ${to === 'concluido' ? 'check-out' : 'check-in'} só pode ser feito no local do serviço.`
+        );
         setBusy(false);
         return;
-      }
-      if (clientLat != null && clientLng != null) {
-        const dist = distanceMeters(pos.lat, pos.lng, clientLat, clientLng);
-        if (dist > WORK_RADIUS) {
-          setError(
-            `Você está a ${dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : dist + ' m'} da casa. ` +
-              `O ${to === 'concluido' ? 'check-out' : 'check-in'} só pode ser feito no local do serviço.`
-          );
-          setBusy(false);
-          return;
-        }
       }
     }
 
     try {
-      await updateMyBookingStatusAction(bookingId, to, pos?.lat ?? null, pos?.lng ?? null);
+      await updateMyBookingStatusAction(
+        bookingId,
+        to,
+        pos?.lat ?? null,
+        pos?.lng ?? null,
+        pos?.accuracy ?? null
+      );
 
       // Check-out: a fatura nasce no banco; dispara o email ao cliente
       if (to === 'concluido') {
@@ -68,11 +71,9 @@ export default function CheckinButton({
 
       router.refresh();
     } catch (e) {
-      setError(
-        (e as Error).message.includes('m da casa')
-          ? (e as Error).message
-          : 'Não foi possível registrar agora. Tente de novo.'
-      );
+      const bruto = (e as Error)?.message ?? '';
+      // Mensagens vindas do banco são escritas para a equipe entender
+      setError(bruto || 'Não foi possível registrar agora. Tente de novo.');
     } finally {
       setBusy(false);
     }

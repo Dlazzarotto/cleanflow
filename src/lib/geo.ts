@@ -10,7 +10,7 @@ export function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: n
 }
 
 /** Raio aceito para registrar algo estando na casa. */
-export const GEOFENCE_METERS = 200;
+export const GEOFENCE_METERS = 250;
 
 export function getPosition(): Promise<{ lat: number; lng: number; accuracy: number } | null> {
   return new Promise((resolve) => {

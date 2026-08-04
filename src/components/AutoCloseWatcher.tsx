@@ -29,7 +29,7 @@ export default function AutoCloseWatcher({ active }: { active: Active[] }) {
       async (p) => {
         for (const b of active) {
           const dist = distanceMeters(p.coords.latitude, p.coords.longitude, b.lat, b.lng);
-          if (dist > 100) {
+          if (dist > 250) {
             strikes.current[b.id] = (strikes.current[b.id] ?? 0) + 1;
             if (strikes.current[b.id] >= 2) {
               strikes.current[b.id] = -99; // evita repetir

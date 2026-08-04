@@ -3,6 +3,7 @@ import { requireManager } from '@/lib/auth';
 import { etTodayRange, etMonthStart } from '@/lib/tz';
 import { STATUS_LABEL, type Booking } from '@/lib/types';
 import Link from 'next/link';
+import HealthPanel from '@/components/HealthPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,8 @@ export default async function DashboardPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Dashboard</h1>
+
+      <HealthPanel />
         <Link href="/agendamentos/novo" className="btn-primary">+ Nova limpeza</Link>
       </div>
 
