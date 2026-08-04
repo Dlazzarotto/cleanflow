@@ -38,7 +38,9 @@ export async function createClientAction(formData: FormData) {
     default_price: String(formData.get('default_price') ?? '') === ''
       ? null
       : Number(formData.get('default_price')),
-    preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null,
+    ...(formData.has('preferred_team_id')
+      ? { preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null }
+      : {}),
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -67,7 +69,7 @@ export async function createTeamAction(formData: FormData) {
 // ---------- AGENDAMENTOS ----------
 
 /**
- * Cria uma limpeza. Se "repeat" for semanal/quinzenal/mensal,
+ * Cria uma limpeza. Se "repeat" for semanal/quinzenal/3 semanas/mensal,
  * cria a série completa com o mesmo series_id.
  */
 export async function createBookingAction(formData: FormData) {
@@ -89,7 +91,12 @@ export async function createBookingAction(formData: FormData) {
     status: 'agendado',
   };
 
-  const stepDays = repeat === 'semanal' ? 7 : repeat === 'quinzenal' ? 14 : repeat === 'mensal' ? 28 : 0;
+  const stepDays =
+    repeat === 'semanal' ? 7
+      : repeat === 'quinzenal' ? 14
+        : repeat === 'tres_semanas' ? 21
+          : repeat === 'mensal' ? 28
+            : 0;
   const total = stepDays > 0 ? occurrences : 1;
   const seriesId = stepDays > 0 ? crypto.randomUUID() : null;
 
@@ -280,7 +287,9 @@ export async function updateClientAction(id: string, formData: FormData) {
       payment_notes: String(formData.get('payment_notes') ?? '') || null,
       sms_opt_in: formData.get('sms_opt_in') === 'on',
       marketing_opt_in: formData.get('marketing_opt_in') === 'on',
-      preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null,
+      ...(formData.has('preferred_team_id')
+        ? { preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null }
+        : {}),
     })
     .eq('id', id);
   if (error) throw new Error(error.message);

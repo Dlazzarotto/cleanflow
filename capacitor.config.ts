@@ -1,13 +1,15 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-
 /**
  * App nativo do CleanFlow — somente a parte da equipe de campo.
  * A gestão continua usando o sistema pelo navegador.
  *
  * O app carrega o site publicado; assim, correções na Vercel chegam
  * ao celular sem precisar publicar versão nova na loja.
+ *
+ * Sem tipagem do @capacitor/cli de propósito: esse pacote só existe
+ * na máquina que gera o app (o Mac), e o build do site não deve
+ * depender dele.
  */
-const config: CapacitorConfig = {
+const config = {
   appId: 'app.cleanflows.equipe',
   appName: 'CleanFlow',
   webDir: 'public',
@@ -27,9 +29,6 @@ const config: CapacitorConfig = {
       launchShowDuration: 1200,
       backgroundColor: '#083A38',
       showSpinner: false,
-    },
-    Geolocation: {
-      // Permissões de localização em segundo plano
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

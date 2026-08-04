@@ -3,3 +3,6 @@ node_modules
 .env.local
 .env
 .vercel
+# Projetos nativos gerados pelo Capacitor (ficam só no Mac)
+/ios
+/android

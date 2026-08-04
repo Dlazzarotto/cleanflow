@@ -36,6 +36,14 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
   if (!client) notFound();
   if (myRole === 'marketing' && (client as any).created_by !== myId) redirect('/marketing');
   const c = client as Client;
+
+  // Nome da equipe do cliente (consulta separada para não quebrar a ficha)
+  let equipeNome: string | null = null;
+  const teamId = (c as any).preferred_team_id;
+  if (teamId) {
+    const { data: t } = await supabase.from('teams').select('name').eq('id', teamId).single();
+    equipeNome = t?.name ?? null;
+  }
   const history = (bookings ?? []) as Booking[];
 
   const info: Array<[string, string | null]> = [
@@ -46,6 +54,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
     ['Pets', c.has_pets ? (c.pets_notes ?? 'Sim') : 'Não'],
     ['Produtos', c.products_notes],
     ['Frequência', c.frequency],
+    ['Equipe responsável', equipeNome],
     ...(isMkt
       ? []
       : ([
