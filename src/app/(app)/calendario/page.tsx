@@ -5,7 +5,11 @@ import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CalendarioPage() {
+export default async function CalendarioPage({
+  searchParams,
+}: {
+  searchParams: { dia?: string; abrir?: string };
+}) {
   await requireManager();
   const supabase = createClient();
   const { data: teams } = await supabase
@@ -18,7 +22,7 @@ export default async function CalendarioPage() {
     <div>
       <BackLink href="/dashboard" label="Dashboard" />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Calendário</h1>
-      <Calendar teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name }))} />
+      <Calendar abrirBooking={searchParams.abrir} teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name }))} />
     </div>
   );
 }

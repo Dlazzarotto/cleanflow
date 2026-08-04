@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { updateBookingAction, cancelBookingAction } from '@/lib/actions';
 import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
@@ -33,12 +33,29 @@ function hm(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function Calendar({ teams }: { teams: Option[] }) {
+export default function Calendar({
+  teams,
+  abrirBooking,
+}: {
+  teams: Option[];
+  abrirBooking?: string;
+}) {
   const [view, setView] = useState<View>('semana');
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Booking | null>(null);
+  const jaAbriu = useRef(false);
+
+  // Abre direto a limpeza indicada na URL (vindo da lista de Agendamentos)
+  useEffect(() => {
+    if (!abrirBooking || jaAbriu.current || bookings.length === 0) return;
+    const alvo = bookings.find((b) => b.id === abrirBooking);
+    if (alvo) {
+      setSelected(alvo);
+      jaAbriu.current = true;
+    }
+  }, [abrirBooking, bookings]);
 
   const range = useMemo(() => {
     if (view === 'dia') return { start: anchor, end: addDays(anchor, 1) };
@@ -247,17 +264,19 @@ function EditModal({
   const [price, setPrice] = useState(Number(booking.price));
   const [teamId, setTeamId] = useState(booking.team_id ?? '');
   const [status, setStatus] = useState<BookingStatus>(booking.status);
-  const [scope, setScope] = useState<'one' | 'series'>('one');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
 
-  async function save() {
+  const emSerie = Boolean(booking.series_id);
+
+  async function save(escopo: 'one' | 'series') {
     setSaving(true);
     setError('');
     try {
       await updateBookingAction({
         id: booking.id,
-        scope,
+        scope: escopo,
         date,
         time,
         duration_minutes: duration,
@@ -272,11 +291,11 @@ function EditModal({
     }
   }
 
-  async function cancel() {
+  async function cancel(escopo: 'one' | 'series') {
     setSaving(true);
     setError('');
     try {
-      await cancelBookingAction({ id: booking.id, scope });
+      await cancelBookingAction({ id: booking.id, scope: escopo });
       onSaved();
     } catch {
       setError('Não foi possível cancelar. Tente novamente.');
@@ -305,32 +324,12 @@ function EditModal({
           <button className="btn-ghost" onClick={onClose} aria-label="Fechar">✕</button>
         </div>
 
-        {booking.series_id && (
-          <div className="mb-4 rounded-card bg-brand-50 p-4">
-            <p className="mb-2 font-semibold text-brand-900">Aplicar mudanças em:</p>
-            <label className="mb-2 flex min-h-touch cursor-pointer items-center gap-3">
-              <input
-                type="radio"
-                name="scope"
-                className="h-5 w-5 accent-brand-700"
-                checked={scope === 'one'}
-                onChange={() => setScope('one')}
-              />
-              Somente esta limpeza
-            </label>
-            <label className="flex min-h-touch cursor-pointer items-center gap-3">
-              <input
-                type="radio"
-                name="scope"
-                className="h-5 w-5 accent-brand-700"
-                checked={scope === 'series'}
-                onChange={() => setScope('series')}
-              />
-              Esta e as próximas da série
-            </label>
+        {emSerie && (
+          <div className="mb-4 rounded-card bg-brand-50 p-3 text-brand-800">
+            🔁 Esta limpeza faz parte de uma série. Ao salvar, escolha se a mudança vale só para
+            hoje ou para as próximas também.
           </div>
         )}
-
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -372,17 +371,80 @@ function EditModal({
 
           {error && <p className="text-red-700">{error}</p>}
 
-          <div className="flex flex-wrap gap-3">
-            <button className="btn-primary grow" onClick={save} disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar mudanças'}
+          {/* Salvar */}
+          <div className="space-y-2 border-t border-brand-100 pt-4">
+            {emSerie ? (
+              <>
+                <button
+                  className="btn-primary w-full"
+                  onClick={() => save('one')}
+                  disabled={saving}
+                >
+                  {saving ? 'Salvando…' : '✓ Mudar só esta limpeza'}
+                </button>
+                <button
+                  className="btn-primary w-full !bg-brand-700"
+                  onClick={() => save('series')}
+                  disabled={saving}
+                >
+                  {saving ? 'Salvando…' : '🔁 Mudar esta e as próximas'}
+                </button>
+              </>
+            ) : (
+              <button className="btn-primary w-full" onClick={() => save('one')} disabled={saving}>
+                {saving ? 'Salvando…' : '✓ Salvar mudanças'}
+              </button>
+            )}
+
+            <button className="btn-ghost w-full" onClick={onClose} disabled={saving}>
+              ← Cancelar mudança
             </button>
-            <button
-              className="btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50"
-              onClick={cancel}
-              disabled={saving}
-            >
-              Cancelar limpeza
-            </button>
+          </div>
+
+          {/* Cancelar a limpeza — ação separada, com confirmação */}
+          <div className="border-t border-brand-100 pt-4">
+            {!confirmarCancelamento ? (
+              <button
+                className="btn-ghost w-full !border-red-700 !text-red-700 hover:!bg-red-50"
+                onClick={() => setConfirmarCancelamento(true)}
+                disabled={saving}
+              >
+                🗑️ Cancelar esta limpeza
+              </button>
+            ) : (
+              <div className="rounded-card bg-red-50 p-4">
+                <p className="mb-3 font-medium text-red-800">
+                  {emSerie
+                    ? 'Cancelar a limpeza. Vale só para hoje ou para as próximas também?'
+                    : 'Tem certeza que quer cancelar esta limpeza?'}
+                </p>
+                <div className="space-y-2">
+                  <button
+                    className="btn-ghost w-full !border-red-700 !text-red-700 hover:!bg-red-100"
+                    onClick={() => cancel('one')}
+                    disabled={saving}
+                  >
+                    {emSerie ? 'Cancelar só esta' : 'Sim, cancelar'}
+                  </button>
+                  {emSerie && (
+                    <button
+                      className="btn-ghost w-full !border-red-700 !text-red-700 hover:!bg-red-100"
+                      onClick={() => cancel('series')}
+                      disabled={saving}
+                    >
+                      Cancelar esta e as próximas
+                    </button>
+                  )}
+                  <button
+                    className="btn-ghost w-full"
+                    onClick={() => setConfirmarCancelamento(false)}
+                    disabled={saving}
+                  >
+                    ← Voltar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

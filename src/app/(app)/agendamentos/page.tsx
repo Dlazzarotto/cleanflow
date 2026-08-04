@@ -121,6 +121,12 @@ export default async function AgendamentosPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/calendario?dia=${new Date(b.scheduled_at).toISOString().slice(0, 10)}&abrir=${b.id}`}
+                    className="btn-ghost"
+                  >
+                    ✏️ Editar
+                  </Link>
                   {b.type === 'visita' && (
                     <Link href={`/estimates/novo?cliente=${b.client_id}`} className="btn-ghost">
                       🧮 Criar estimate
