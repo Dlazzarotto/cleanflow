@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 async function getCompanyId() {
   const { supabase, companyId } = await getAuth();
@@ -641,4 +642,31 @@ export async function saveReminderSettingsAction(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidatePath('/configuracoes');
+}
+
+// ---------- TROCA DE EMPRESA (quem atende mais de uma) ----------
+export async function switchCompanyAction(companyId: string) {
+  const supabase = createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+
+  // Só troca para empresa onde a pessoa realmente tem vínculo ativo
+  const { data: vinculo } = await supabase
+    .from('memberships')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('company_id', companyId)
+    .eq('active', true)
+    .maybeSingle();
+  if (!vinculo) throw new Error('Você não tem acesso a esta empresa');
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: user.id, active_company_id: companyId }, { onConflict: 'user_id' });
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/', 'layout');
+  redirect('/');
 }

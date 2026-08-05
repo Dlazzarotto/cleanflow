@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getPlatformAdmin } from '@/lib/platform';
+import CompanySwitcher from '@/components/CompanySwitcher';
 
 const MANAGER_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -58,6 +59,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     await supabase.rpc('touch_my_membership');
   }
 
+  // Empresas em que a pessoa tem vínculo ativo (agência de marketing pode ter várias)
+  const { data: vinculos } = await supabase
+    .from('memberships')
+    .select('company_id, role, companies(name)')
+    .eq('user_id', user.id)
+    .eq('active', true);
+
+  const empresas = (vinculos ?? []).map((v: any) => ({
+    id: v.company_id,
+    name: v.companies?.name ?? 'Empresa',
+    role: v.role,
+  }));
+
   const accountStatus = (membership as any)?.companies?.account_status ?? 'ativa';
   if (accountStatus === 'suspensa' || accountStatus === 'cancelada') {
     return (
@@ -92,6 +106,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <p className="text-brand-100 text-sm">{(membership as any).full_name}</p>
           )}
         </div>
+        {companyId && (
+          <CompanySwitcher empresas={empresas} atual={companyId as string} />
+        )}
         <nav className="flex overflow-x-auto md:block">
           {nav.map((item) => (
             <Link
