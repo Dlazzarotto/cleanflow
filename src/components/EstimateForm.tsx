@@ -375,7 +375,8 @@ export default function EstimateForm({
             <select className="input" id="est-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
               <option value="unica">Limpeza única</option>
               <option value="semanal">Semanal</option>
-              <option value="quinzenal">Quinzenal</option>
+              <option value="quinzenal">Quinzenal (a cada 2 semanas)</option>
+              <option value="tres_semanas">A cada 3 semanas</option>
               <option value="mensal">Mensal</option>
             </select>
           </div>
@@ -523,14 +524,60 @@ export default function EstimateForm({
             {loadingMarket ? '🔍 Pesquisando a região…' : market ? '🔄 Atualizar pesquisa' : '🔍 Pesquisar preços da região'}
           </button>
           {marketError && <p className="mt-2 text-red-700">{marketError}</p>}
-          {market && (
-            <div className="mt-3 space-y-1 text-brand-900">
-              <p><span className="font-semibold">Por visita:</span> {usd(market.visit_low)} – {usd(market.visit_high)}</p>
-              <p><span className="font-semibold">Por hora:</span> {usd(market.hourly_low)} – {usd(market.hourly_high)}</p>
-              <p><span className="font-semibold">Deep clean:</span> {usd(market.deep_low)} – {usd(market.deep_high)}</p>
-              <p className="mt-2 text-sm text-brand-800">{market.resumo}</p>
-            </div>
-          )}
+
+          {market && (() => {
+            // A referência da região aplicada A ESTE imóvel:
+            // faixa por hora do mercado × tempo estimado deste serviço
+            const horas = result.minutes / 60;
+            const refBaixa = Math.round(market.hourly_low * horas);
+            const refAlta = Math.round(market.hourly_high * horas);
+            // Compara pelo meio da faixa calculada
+            const meu = Math.round((result.price_low + result.price_high) / 2);
+
+            const posicao =
+              meu < refBaixa
+                ? { texto: 'abaixo da região', cls: 'text-sun', dica: 'Há espaço para subir o preço.' }
+                : meu > refAlta
+                  ? { texto: 'acima da região', cls: 'text-red-700', dica: 'Justifique o diferencial na proposta.' }
+                  : { texto: 'dentro da região', cls: 'text-brand-700', dica: 'Preço competitivo.' };
+
+            const diferenca =
+              meu < refBaixa
+                ? Math.round(((refBaixa - meu) / refBaixa) * 100)
+                : meu > refAlta
+                  ? Math.round(((meu - refAlta) / refAlta) * 100)
+                  : 0;
+
+            return (
+              <div className="mt-3 space-y-3">
+                <div className="rounded-card bg-brand-50 p-3">
+                  <p className="text-sm text-brand-800">
+                    Para este imóvel ({formatMinutes(result.minutes)} de serviço), a região cobra
+                  </p>
+                  <p className="text-2xl font-bold text-brand-900">
+                    {usd(refBaixa)} – {usd(refAlta)}
+                  </p>
+                  <p className={`mt-1 font-medium ${posicao.cls}`}>
+                    Seu preço de {usd(meu)} está {posicao.texto}
+                    {diferenca > 0 ? ` (${diferenca}%)` : ''}
+                  </p>
+                  <p className="text-sm text-brand-800">{posicao.dica}</p>
+                </div>
+
+                <details>
+                  <summary className="cursor-pointer text-sm font-medium text-brand-700">
+                    Ver a pesquisa completa da região
+                  </summary>
+                  <div className="mt-2 space-y-1 text-brand-900">
+                    <p><span className="font-semibold">Por visita:</span> {usd(market.visit_low)} – {usd(market.visit_high)}</p>
+                    <p><span className="font-semibold">Por hora:</span> {usd(market.hourly_low)} – {usd(market.hourly_high)}</p>
+                    <p><span className="font-semibold">Deep clean:</span> {usd(market.deep_low)} – {usd(market.deep_high)}</p>
+                    <p className="mt-2 text-sm text-brand-800">{market.resumo}</p>
+                  </div>
+                </details>
+              </div>
+            );
+          })()}
         </div>
 
         {saveError && <p className="text-red-700">{saveError}</p>}
