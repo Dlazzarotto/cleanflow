@@ -270,6 +270,8 @@ function EditModal({
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
 
   const emSerie = Boolean(booking.series_id);
+  // Limpeza que ainda não aconteceu não pode ser marcada como concluída
+  const noFuturo = new Date(`${date}T${time}`) > new Date();
 
   async function save(escopo: 'one' | 'series') {
     setSaving(true);
@@ -387,12 +389,22 @@ function EditModal({
             </div>
           )}
 
+          {noFuturo && status === 'concluido' && (
+            <p className="rounded-card bg-sun/20 p-3 text-brand-900">
+              ⚠️ Esta limpeza está marcada para uma data futura. Só marque como concluída depois
+              que o serviço acontecer — a fatura do cliente nasce nesse momento.
+            </p>
+          )}
+
           <div>
             <label className="label" htmlFor="edit-status">Status</label>
             <select className="input" id="edit-status" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus)}>
-              {(Object.keys(STATUS_LABEL) as BookingStatus[]).map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-              ))}
+              {(Object.keys(STATUS_LABEL) as BookingStatus[])
+                // Serviço futuro não pode ser dado como concluído
+                .filter((s) => !(noFuturo && s === 'concluido'))
+                .map((s) => (
+                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                ))}
             </select>
           </div>
 
