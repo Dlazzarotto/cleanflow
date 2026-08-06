@@ -104,14 +104,16 @@ export async function saveEstimateAction(payload: {
 
 export async function updateEstimateStatusAction(id: string, status: string) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase.from('estimates').update({ status }).eq('id', id);
+  const { error } = await supabase.from('estimates').update({ status }).eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
 
   // Espelha no cliente: enviado -> em espera; recusado -> inativo
   const { data: est } = await supabase.from('estimates').select('client_id').eq('id', id).single();
   if (est?.client_id) {
     if (status === 'enviado') {
-      await supabase.from('clients').update({ status: 'em_espera' }).eq('id', est.client_id).neq('status', 'ativo');
+      await supabase.from('clients').update({ status: 'em_espera' }).eq('id', est.client_id).neq('status', 'ativo')
+    .select('id');
     } else if (status === 'recusado') {
       // Nunca teve limpeza concluida => nao fechou (perdido); ja foi cliente => ex-cliente
       const { count } = await supabase
@@ -124,7 +126,8 @@ export async function updateEstimateStatusAction(id: string, status: string) {
         .from('clients')
         .update({ status: novoStatus })
         .eq('id', est.client_id)
-        .in('status', ['em_espera', 'lead']);
+        .in('status', ['em_espera', 'lead'])
+    .select('id');
     }
   }
   revalidatePath('/estimates');
@@ -136,16 +139,23 @@ export async function approveEstimateAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const id = String(formData.get('id'));
   const finalPrice = Number(formData.get('final_price') ?? 0);
-  const { error } = await supabase
+  const { data: linhasEstimates1, error } = await supabase
     .from('estimates')
     .update({ status: 'aprovado', final_price: finalPrice > 0 ? finalPrice : null })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasEstimates1 || linhasEstimates1.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o orçamento: seu acesso não permite a alteração.'
+    );
+  }
 
   // Estimate aprovado: o cliente vira ativo
   const { data: est } = await supabase.from('estimates').select('client_id').eq('id', id).single();
   if (est?.client_id) {
-    await supabase.from('clients').update({ status: 'ativo' }).eq('id', est.client_id);
+    await supabase.from('clients').update({ status: 'ativo' }).eq('id', est.client_id)
+    .select('id');
   }
   revalidatePath('/estimates');
   revalidatePath('/clientes');
@@ -185,7 +195,8 @@ export async function convertEstimateToClientAction(id: string) {
   const { error: linkError } = await supabase
     .from('estimates')
     .update({ client_id: created.id })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (linkError) throw new Error(linkError.message);
 
   revalidatePath('/estimates');
@@ -218,7 +229,7 @@ export async function updateEstimateAction(
   const settings = await getPricingSettings();
   const result = calcEstimate(payload.input, settings);
 
-  const { error } = await supabase
+  const { data: linhasEstimates2, error } = await supabase
     .from('estimates')
     .update({
       client_id: payload.client_id,
@@ -249,8 +260,14 @@ export async function updateEstimateAction(
       hourly_rate: settings.hourly_rate,
       market_notes: payload.market_notes,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasEstimates2 || linhasEstimates2.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o orçamento: seu acesso não permite a alteração.'
+    );
+  }
 
   revalidatePath('/estimates');
 }
@@ -277,7 +294,11 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
   if (!e.client_id) throw new Error('Converta o lead em cliente antes de agendar a recorrência');
 
   const step =
-    e.frequency === 'semanal' ? 7 : e.frequency === 'quinzenal' ? 14 : e.frequency === 'mensal' ? 28 : 0;
+    e.frequency === 'semanal' ? 7
+      : e.frequency === 'quinzenal' ? 14
+        : e.frequency === 'tres_semanas' ? 21
+          : e.frequency === 'mensal' ? 28
+            : 0;
   const total = step > 0 ? occurrences : 1;
   const seriesId = step > 0 ? crypto.randomUUID() : null;
   const precoManutencao = Number(e.recurring_price ?? e.final_price ?? e.price_low ?? 0);
@@ -301,11 +322,13 @@ export async function createRecurrenceFromEstimateAction(formData: FormData) {
   const { error } = await supabase.from('bookings').insert(rows);
   if (error) throw new Error(error.message);
 
-  await supabase.from('estimates').update({ series_id: seriesId }).eq('id', id);
+  await supabase.from('estimates').update({ series_id: seriesId }).eq('id', id)
+    .select('id');
   await supabase
     .from('clients')
     .update({ status: 'ativo', default_price: precoManutencao > 0 ? precoManutencao : null })
-    .eq('id', e.client_id);
+    .eq('id', e.client_id)
+    .select('id');
 
   revalidatePath('/calendario');
   revalidatePath('/agendamentos');

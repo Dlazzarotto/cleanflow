@@ -9,7 +9,7 @@ export async function updateCompanyAccountAction(formData: FormData) {
   const { supabase } = await requirePlatformAdmin();
   const id = String(formData.get('id'));
 
-  const { error } = await supabase
+  const { data: linhasCompanies27, error } = await supabase
     .from('companies')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -28,8 +28,14 @@ export async function updateCompanyAccountAction(formData: FormData) {
       next_due_date: String(formData.get('next_due_date') ?? '') || null,
       platform_notes: String(formData.get('platform_notes') ?? '') || null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasCompanies27 || linhasCompanies27.length === 0) {
+    throw new Error(
+      'Não foi possível salvar os dados da empresa: apenas a gestão pode alterar.'
+    );
+  }
 
   revalidatePath('/admin');
   revalidatePath(`/admin/${id}`);
@@ -38,11 +44,17 @@ export async function updateCompanyAccountAction(formData: FormData) {
 /** Suspende ou reativa o acesso de uma empresa (inadimplencia, cancelamento). */
 export async function setAccountStatusAction(id: string, status: string) {
   const { supabase } = await requirePlatformAdmin();
-  const { error } = await supabase
+  const { data: linhasCompanies28, error } = await supabase
     .from('companies')
     .update({ account_status: status })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasCompanies28 || linhasCompanies28.length === 0) {
+    throw new Error(
+      'Não foi possível salvar os dados da empresa: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/admin');
   revalidatePath(`/admin/${id}`);
 }
@@ -54,10 +66,16 @@ export async function setMemberRolePlatformAction(formData: FormData) {
   const companyId = String(formData.get('company_id'));
   const role = String(formData.get('role'));
 
-  const { error } = await supabase
+  const { data: linhasMemberships29, error } = await supabase
     .from('memberships')
     .update({ role })
-    .eq('id', membershipId);
+    .eq('id', membershipId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasMemberships29 || linhasMemberships29.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath(`/admin/${companyId}`);
 }

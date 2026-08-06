@@ -37,7 +37,7 @@ export async function decideExtraAction(formData: FormData) {
   const decisao = String(formData.get('decision'));
   const preco = String(formData.get('price') ?? '');
 
-  const { error } = await supabase
+  const { data: linhasBookingExtras3, error } = await supabase
     .from('booking_extras')
     .update({
       status: decisao === 'aprovar' ? 'aprovado' : 'recusado',
@@ -46,8 +46,14 @@ export async function decideExtraAction(formData: FormData) {
       decided_by: userId,
       decided_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasBookingExtras3 || linhasBookingExtras3.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o serviço extra.'
+    );
+  }
 
   revalidatePath('/faturas');
   revalidatePath('/minha-agenda');
@@ -72,7 +78,7 @@ export async function updateExtraCatalogAction(formData: FormData) {
   const { supabase, role } = await getAuth();
   if (!isManager(role)) throw new Error('Apenas a gestão administra o catálogo');
 
-  const { error } = await supabase
+  const { data: linhasServiceExtras4, error } = await supabase
     .from('service_extras')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -80,8 +86,14 @@ export async function updateExtraCatalogAction(formData: FormData) {
       minutes: Number(formData.get('minutes') ?? 0),
       active: formData.get('active') === 'on',
     })
-    .eq('id', String(formData.get('id')));
+    .eq('id', String(formData.get('id')))
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasServiceExtras4 || linhasServiceExtras4.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o catálogo de extras.'
+    );
+  }
   revalidatePath('/faturas');
 }
 

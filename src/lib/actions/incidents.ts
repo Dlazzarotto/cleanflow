@@ -58,7 +58,7 @@ export async function resolveIncidentAction(formData: FormData) {
   const status = String(formData.get('status') ?? 'em_analise');
   const notes = String(formData.get('resolution_notes') ?? '') || null;
 
-  const { error } = await supabase
+  const { data: linhasIncidents5, error } = await supabase
     .from('incidents')
     .update({
       status,
@@ -66,8 +66,14 @@ export async function resolveIncidentAction(formData: FormData) {
       resolved_by: status === 'resolvida' ? userId : null,
       resolved_at: status === 'resolvida' ? new Date().toISOString() : null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasIncidents5 || linhasIncidents5.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a ocorrência: apenas a gestão pode tratar.'
+    );
+  }
 
   revalidatePath('/ocorrencias');
 }
@@ -141,7 +147,7 @@ export async function decideLockoutAction(formData: FormData) {
   const decision = String(formData.get('decision'));
   const aprovar = decision === 'aprovar';
 
-  const { error } = await supabase
+  const { data: linhasBookings6, error } = await supabase
     .from('bookings')
     .update({
       lockout_status: aprovar ? 'aprovado' : 'recusado',
@@ -149,8 +155,14 @@ export async function decideLockoutAction(formData: FormData) {
       lockout_decided_at: new Date().toISOString(),
       status: aprovar ? 'sem_acesso' : 'em_andamento',
     })
-    .eq('id', bookingId);
+    .eq('id', bookingId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasBookings6 || linhasBookings6.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
 
   revalidatePath('/ocorrencias');
   revalidatePath('/agendamentos');

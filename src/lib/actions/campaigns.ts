@@ -41,7 +41,7 @@ export async function updateCampaignAction(formData: FormData) {
   const { supabase, role } = await getAuth();
   if (!isManager(role)) throw new Error('Apenas a gestão altera campanhas');
 
-  const { error } = await supabase
+  const { data: linhasCampaigns0, error } = await supabase
     .from('campaigns')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -53,8 +53,14 @@ export async function updateCampaignAction(formData: FormData) {
       active: formData.get('active') === 'on',
       notes: String(formData.get('notes') ?? '') || null,
     })
-    .eq('id', String(formData.get('id')));
+    .eq('id', String(formData.get('id')))
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasCampaigns0 || linhasCampaigns0.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a campanha.'
+    );
+  }
 
   revalidatePath('/campanhas');
 }

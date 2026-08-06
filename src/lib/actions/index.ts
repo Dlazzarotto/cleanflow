@@ -119,7 +119,8 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const patch: Record<string, unknown> = { status };
   if (status === 'em_andamento') patch.checkin_at = new Date().toISOString();
   if (status === 'concluido') patch.checkout_at = new Date().toISOString();
-  const { error } = await supabase.from('bookings').update(patch).eq('id', id);
+  const { error } = await supabase.from('bookings').update(patch).eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
   revalidatePath('/agendamentos');
   revalidatePath('/dashboard');
@@ -157,6 +158,8 @@ export async function updateBookingAction(input: {
     price: input.price,
     team_id: input.team_id,
     status: input.status,
+    // Preço mexido aqui é decisão desta limpeza: não é sobrescrito pelo cadastro
+    price_manual: true,
   };
 
   // Dias entre uma limpeza e a seguinte
@@ -183,11 +186,17 @@ export async function updateBookingAction(input: {
       // Frequência mudou: recalcula as datas a partir desta limpeza
       for (let i = 0; i < lista.length; i++) {
         const dia = new Date(newStart.getTime() + i * passo * 86400000);
-        const { error } = await supabase
+        const { data: linhasBookings7, error } = await supabase
           .from('bookings')
           .update({ ...patchCommon, scheduled_at: dia.toISOString() })
-          .eq('id', lista[i].id);
+          .eq('id', lista[i].id)
+    .select('id');
         if (error) throw new Error(error.message);
+  if (!linhasBookings7 || linhasBookings7.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
       }
 
       // O cliente passa a ter a nova frequência
@@ -195,26 +204,39 @@ export async function updateBookingAction(input: {
         await supabase
           .from('clients')
           .update({ frequency: input.frequency })
-          .eq('id', current.client_id);
+          .eq('id', current.client_id)
+    .select('id');
       }
     } else {
       // Mantém o intervalo: desloca todas pelo mesmo tanto
       const deltaMs = newStart.getTime() - new Date(current.scheduled_at).getTime();
       for (const b of lista) {
         const shifted = new Date(new Date(b.scheduled_at).getTime() + deltaMs);
-        const { error } = await supabase
+        const { data: linhasBookings8, error } = await supabase
           .from('bookings')
           .update({ ...patchCommon, scheduled_at: shifted.toISOString() })
-          .eq('id', b.id);
+          .eq('id', b.id)
+    .select('id');
         if (error) throw new Error(error.message);
+  if (!linhasBookings8 || linhasBookings8.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
       }
     }
   } else {
-    const { error } = await supabase
+    const { data: linhasBookings9, error } = await supabase
       .from('bookings')
       .update({ ...patchCommon, scheduled_at: newStart.toISOString() })
-      .eq('id', input.id);
+      .eq('id', input.id)
+    .select('id');
     if (error) throw new Error(error.message);
+  if (!linhasBookings9 || linhasBookings9.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
   }
 
   revalidatePath('/agendamentos');
@@ -237,18 +259,30 @@ export async function cancelBookingAction(input: { id: string; scope: 'one' | 's
   if (fetchError || !current) throw new Error('Limpeza não encontrada');
 
   if (input.scope === 'series' && current.series_id) {
-    const { error } = await supabase
+    const { data: linhasBookings10, error } = await supabase
       .from('bookings')
       .update({ status: 'cancelado' })
       .eq('series_id', current.series_id)
-      .gte('scheduled_at', current.scheduled_at);
+      .gte('scheduled_at', current.scheduled_at)
+    .select('id');
     if (error) throw new Error(error.message);
+  if (!linhasBookings10 || linhasBookings10.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
   } else {
-    const { error } = await supabase
+    const { data: linhasBookings11, error } = await supabase
       .from('bookings')
       .update({ status: 'cancelado' })
-      .eq('id', input.id);
+      .eq('id', input.id)
+    .select('id');
     if (error) throw new Error(error.message);
+  if (!linhasBookings11 || linhasBookings11.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a limpeza: seu acesso não permite a alteração.'
+    );
+  }
   }
 
   revalidatePath('/agendamentos');
@@ -260,7 +294,7 @@ export async function cancelBookingAction(input: { id: string; scope: 'one' | 's
 // ---------- EDICAO DE CLIENTE ----------
 export async function updateClientAction(id: string, formData: FormData) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('clients')
     .update({
       full_name: String(formData.get('full_name') ?? '').trim(),
@@ -292,9 +326,20 @@ export async function updateClientAction(id: string, formData: FormData) {
         ? { preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null }
         : {}),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
+
   if (error) throw new Error(error.message);
+
+  // Sem erro mas nenhuma linha alterada: a gravação foi barrada pelo banco
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Não foi possível salvar: seu acesso não permite alterar este cliente. Fale com o escritório.'
+    );
+  }
+
   revalidatePath('/clientes');
+  revalidatePath(`/clientes/${id}`);
   redirect(`/clientes/${id}`);
 }
 
@@ -302,15 +347,21 @@ export async function updateClientAction(id: string, formData: FormData) {
 export async function updateTeamAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const id = String(formData.get('id'));
-  const { error } = await supabase
+  const { data: linhasTeams12, error } = await supabase
     .from('teams')
     .update({
       name: String(formData.get('name') ?? '').trim(),
       color: String(formData.get('color') ?? '#13706B'),
       active: formData.get('active') === 'on',
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasTeams12 || linhasTeams12.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a equipe: seu acesso não permite a alteração.'
+    );
+  }
   revalidatePath('/equipes');
 }
 
@@ -339,11 +390,17 @@ export async function removeTeamMemberAction(teamId: string, userId: string) {
 // ---------- VINCULO (ativar/desativar acesso) ----------
 export async function setMembershipActiveAction(membershipId: string, active: boolean) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase
+  const { data: linhasMemberships13, error } = await supabase
     .from('memberships')
     .update({ active })
-    .eq('id', membershipId);
+    .eq('id', membershipId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasMemberships13 || linhasMemberships13.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/equipes');
 }
 
@@ -393,14 +450,20 @@ export async function updatePositionAction(formData: FormData) {
   for (const { key } of PERMISSION_KEYS) {
     permissions[key] = formData.get(`perm_${key}`) === 'on';
   }
-  const { error } = await supabase
+  const { data: linhasPositions14, error } = await supabase
     .from('positions')
     .update({
       name: String(formData.get('name') ?? '').trim(),
       permissions,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasPositions14 || linhasPositions14.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o cargo: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/equipes');
 }
 
@@ -415,11 +478,17 @@ export async function setMemberPositionAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const membershipId = String(formData.get('membership_id'));
   const positionId = String(formData.get('position_id') ?? '');
-  const { error } = await supabase
+  const { data: linhasMemberships15, error } = await supabase
     .from('memberships')
     .update({ position_id: positionId || null })
-    .eq('id', membershipId);
+    .eq('id', membershipId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasMemberships15 || linhasMemberships15.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/equipes');
 }
 
@@ -427,12 +496,18 @@ export async function setMemberPositionAction(formData: FormData) {
 // ---------- CONFIGURACOES ----------
 export async function updateMyNameAction(formData: FormData) {
   const { supabase, userId, companyId } = await getAuth();
-  const { error } = await supabase
+  const { data: linhasMemberships16, error } = await supabase
     .from('memberships')
     .update({ full_name: String(formData.get('full_name') ?? '').trim() })
     .eq('user_id', userId)
-    .eq('company_id', companyId);
+    .eq('company_id', companyId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasMemberships16 || linhasMemberships16.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/configuracoes');
 }
 
@@ -453,7 +528,7 @@ export async function updateCompanyAction(formData: FormData) {
   if (!['owner', 'admin', 'supervisor'].includes(role)) {
     throw new Error('Apenas a gestão pode editar os dados da empresa');
   }
-  const { error } = await supabase
+  const { data: linhasCompanies17, error } = await supabase
     .from('companies')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -464,8 +539,14 @@ export async function updateCompanyAction(formData: FormData) {
       ...(formData.get('lat') ? { lat: Number(formData.get('lat')) } : {}),
       ...(formData.get('lng') ? { lng: Number(formData.get('lng')) } : {}),
     })
-    .eq('id', companyId);
+    .eq('id', companyId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasCompanies17 || linhasCompanies17.length === 0) {
+    throw new Error(
+      'Não foi possível salvar os dados da empresa: apenas a gestão pode alterar.'
+    );
+  }
   revalidatePath('/configuracoes');
 }
 
@@ -473,11 +554,17 @@ export async function updateCompanyAction(formData: FormData) {
 // ---------- GEOCODIFICACAO EM LOTE ----------
 export async function saveClientCoordsAction(id: string, lat: number, lng: number, address?: string) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase
+  const { data: linhasClients18, error } = await supabase
     .from('clients')
     .update({ lat, lng, ...(address ? { address } : {}) })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasClients18 || linhasClients18.length === 0) {
+    throw new Error(
+      'Não foi possível salvar este cliente: seu acesso não permite a alteração.'
+    );
+  }
   revalidatePath('/clientes');
 }
 
@@ -519,7 +606,7 @@ export async function banClientAction(input: {
     return { ok: false, error: 'Senha incorreta. O cliente não foi banido.' };
   }
 
-  const { error } = await supabase
+  const { data: linhasBanimento, error } = await supabase
     .from('clients')
     .update({
       status: 'deletado',
@@ -527,8 +614,12 @@ export async function banClientAction(input: {
       banned_at: new Date().toISOString(),
       banned_by: userId,
     })
-    .eq('id', input.id);
+    .eq('id', input.id)
+    .select('id');
   if (error) return { ok: false, error: error.message };
+  if (!linhasBanimento || linhasBanimento.length === 0) {
+    return { ok: false, error: 'Apenas o dono da empresa pode banir um cliente.' };
+  }
 
   revalidatePath('/clientes');
   revalidatePath(`/clientes/${input.id}`);
@@ -540,11 +631,17 @@ export async function unbanClientAction(id: string) {
   if (role !== 'owner') {
     throw new Error('Apenas o dono da empresa pode reverter um banimento.');
   }
-  const { error } = await supabase
+  const { data: linhasClients19, error } = await supabase
     .from('clients')
     .update({ status: 'inativo' })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasClients19 || linhasClients19.length === 0) {
+    throw new Error(
+      'Não foi possível salvar este cliente: seu acesso não permite a alteração.'
+    );
+  }
   revalidatePath('/clientes');
   revalidatePath(`/clientes/${id}`);
 }
@@ -553,28 +650,41 @@ export async function unbanClientAction(id: string) {
 // ---------- MARKETING ----------
 export async function setMarketingOptInAction(id: string, value: boolean) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase.from('clients').update({ marketing_opt_in: value }).eq('id', id);
+  const { error } = await supabase.from('clients').update({ marketing_opt_in: value }).eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
   revalidatePath('/marketing');
 }
 
 export async function saveLostReasonAction(formData: FormData) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase
+  const { data: linhasClients20, error } = await supabase
     .from('clients')
     .update({ lost_reason: String(formData.get('lost_reason') ?? '') || null })
-    .eq('id', String(formData.get('id')));
+    .eq('id', String(formData.get('id')))
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasClients20 || linhasClients20.length === 0) {
+    throw new Error(
+      'Não foi possível salvar este cliente: seu acesso não permite a alteração.'
+    );
+  }
   revalidatePath('/marketing');
 }
 
 export async function markContactedAction(id: string) {
   const { supabase } = await getCompanyId();
-  const { error } = await supabase
+  const { data: linhasClients21, error } = await supabase
     .from('clients')
     .update({ last_contact_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasClients21 || linhasClients21.length === 0) {
+    throw new Error(
+      'Não foi possível salvar este cliente: seu acesso não permite a alteração.'
+    );
+  }
   revalidatePath('/marketing');
 }
 
@@ -611,15 +721,19 @@ export async function quickUpdateClientBillingAction(formData: FormData) {
   const id = String(formData.get('id'));
   const preco = String(formData.get('default_price') ?? '');
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('clients')
     .update({
       payment_method: String(formData.get('payment_method') ?? '') || null,
       default_price: preco === '' ? null : Number(preco),
       contract_status: String(formData.get('contract_status') ?? 'pendente'),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error('Não foi possível salvar: seu acesso não permite alterar este cliente.');
+  }
 
   revalidatePath('/regularizacao');
   revalidatePath('/clientes');

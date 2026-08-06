@@ -32,7 +32,7 @@ export async function createPlatformCampaignAction(formData: FormData) {
 
 export async function updatePlatformCampaignAction(formData: FormData) {
   const { supabase } = await requirePlatformAdmin();
-  const { error } = await supabase
+  const { data: linhasPlatformCampaigns25, error } = await supabase
     .from('platform_campaigns')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -42,14 +42,20 @@ export async function updatePlatformCampaignAction(formData: FormData) {
       commission_value: Number(formData.get('commission_value') ?? 0),
       active: formData.get('active') === 'on',
     })
-    .eq('id', String(formData.get('id')));
+    .eq('id', String(formData.get('id')))
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasPlatformCampaigns25 || linhasPlatformCampaigns25.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a campanha.'
+    );
+  }
   revalidatePath('/admin/marketing');
 }
 
 export async function updatePlatformLeadAction(formData: FormData) {
   const { supabase } = await requirePlatformAdmin();
-  const { error } = await supabase
+  const { data: linhasPlatformLeads26, error } = await supabase
     .from('platform_leads')
     .update({
       status: String(formData.get('status') ?? 'novo'),
@@ -58,7 +64,13 @@ export async function updatePlatformLeadAction(formData: FormData) {
       company_id: String(formData.get('company_id') ?? '') || null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', String(formData.get('id')));
+    .eq('id', String(formData.get('id')))
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasPlatformLeads26 || linhasPlatformLeads26.length === 0) {
+    throw new Error(
+      'Não foi possível salvar o lead.'
+    );
+  }
   revalidatePath('/admin/marketing');
 }

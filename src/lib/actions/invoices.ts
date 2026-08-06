@@ -9,7 +9,7 @@ export async function markInvoicePaidAction(formData: FormData) {
   if (!isManager(role)) throw new Error('Apenas a gestão pode dar baixa em faturas');
 
   const id = String(formData.get('id'));
-  const { error } = await supabase
+  const { data: linhasInvoices22, error } = await supabase
     .from('invoices')
     .update({
       status: 'paga',
@@ -17,8 +17,14 @@ export async function markInvoicePaidAction(formData: FormData) {
       paid_method: String(formData.get('paid_method') ?? '') || null,
       paid_notes: String(formData.get('paid_notes') ?? '') || null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasInvoices22 || linhasInvoices22.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a fatura: apenas a gestão pode alterar.'
+    );
+  }
 
   revalidatePath('/faturas');
   revalidatePath('/dashboard');
@@ -29,14 +35,20 @@ export async function setInvoiceStatusAction(id: string, status: string) {
   const { supabase, role } = await getAuth();
   if (!isManager(role)) throw new Error('Apenas a gestão pode alterar faturas');
 
-  const { error } = await supabase
+  const { data: linhasInvoices23, error } = await supabase
     .from('invoices')
     .update({
       status,
       ...(status === 'aberta' ? { paid_at: null, paid_method: null, paid_notes: null } : {}),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasInvoices23 || linhasInvoices23.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a fatura: apenas a gestão pode alterar.'
+    );
+  }
 
   revalidatePath('/faturas');
 }
@@ -60,11 +72,17 @@ export async function updateInvoiceAction(formData: FormData) {
 
   if (valor <= 0) throw new Error('Informe um valor maior que zero');
 
-  const { error } = await supabase
+  const { data: linhasInvoices24, error } = await supabase
     .from('invoices')
     .update({ amount: valor, due_at: vencimento })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!linhasInvoices24 || linhasInvoices24.length === 0) {
+    throw new Error(
+      'Não foi possível salvar a fatura: apenas a gestão pode alterar.'
+    );
+  }
 
   // Refaz os itens para bater com o novo valor
   const { data: itens } = await supabase
@@ -85,7 +103,8 @@ export async function updateInvoiceAction(formData: FormData) {
     await supabase
       .from('invoice_items')
       .update({ description: descricao || lista[0].description, amount: valor })
-      .eq('id', lista[0].id);
+      .eq('id', lista[0].id)
+    .select('id');
   } else {
     // Vários itens: o primeiro absorve a diferença, os extras ficam intactos
     const extras = lista.slice(1).reduce((s: number, i: any) => s + Number(i.amount), 0);
@@ -95,7 +114,8 @@ export async function updateInvoiceAction(formData: FormData) {
         description: descricao || lista[0].description,
         amount: Math.max(valor - extras, 0),
       })
-      .eq('id', lista[0].id);
+      .eq('id', lista[0].id)
+    .select('id');
   }
 
   revalidatePath('/faturas');
@@ -118,29 +138,26 @@ export async function recalcInvoiceAction(id: string) {
   if (!inv) throw new Error('Fatura não encontrada');
   if (inv.status === 'paga') throw new Error('Desfaça a baixa antes de recalcular');
 
+  // O cadastro do cliente é a fonte de verdade.
+  // O valor do agendamento só prevalece se foi definido a mão naquela limpeza.
   let base = 0;
-  if (inv.booking_id) {
-    const { data: b } = await supabase
-      .from('bookings')
-      .select('price, client_id')
-      .eq('id', inv.booking_id)
-      .single();
-    base = Number(b?.price ?? 0);
-    if (base === 0 && b?.client_id) {
-      const { data: c } = await supabase
-        .from('clients')
-        .select('default_price')
-        .eq('id', b.client_id)
-        .single();
-      base = Number(c?.default_price ?? 0);
-    }
-  } else if (inv.client_id) {
+  if (inv.client_id) {
     const { data: c } = await supabase
       .from('clients')
       .select('default_price')
       .eq('id', inv.client_id)
       .single();
     base = Number(c?.default_price ?? 0);
+  }
+
+  if (inv.booking_id) {
+    const { data: b } = await supabase
+      .from('bookings')
+      .select('price, price_manual')
+      .eq('id', inv.booking_id)
+      .single();
+    if (b?.price_manual && Number(b.price) > 0) base = Number(b.price);
+    if (base === 0) base = Number(b?.price ?? 0);
   }
 
   let extras = 0;
@@ -156,7 +173,8 @@ export async function recalcInvoiceAction(id: string) {
   const total = base + extras;
   if (total <= 0) throw new Error('O cliente não tem valor definido no cadastro');
 
-  await supabase.from('invoices').update({ amount: total }).eq('id', id);
+  await supabase.from('invoices').update({ amount: total }).eq('id', id)
+    .select('id');
 
   // Item principal passa a valer o novo valor da limpeza
   const { data: itens } = await supabase
@@ -166,7 +184,8 @@ export async function recalcInvoiceAction(id: string) {
     .order('sort_order');
   const primeiro = (itens ?? [])[0];
   if (primeiro) {
-    await supabase.from('invoice_items').update({ amount: base }).eq('id', primeiro.id);
+    await supabase.from('invoice_items').update({ amount: base }).eq('id', primeiro.id)
+    .select('id');
   } else {
     await supabase
       .from('invoice_items')

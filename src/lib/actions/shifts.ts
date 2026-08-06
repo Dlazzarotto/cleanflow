@@ -38,7 +38,7 @@ export async function endDayAction(input: {
   const { data: openId } = await supabase.rpc('my_open_shift');
   if (!openId) return { ok: false, error: 'Nenhum dia em andamento.' };
 
-  const { error } = await supabase
+  const { data: linhasJornada, error } = await supabase
     .from('work_shifts')
     .update({
       ended_at: new Date().toISOString(),
@@ -46,8 +46,12 @@ export async function endDayAction(input: {
       end_lng: input.lng,
       note: input.note?.trim() || null,
     })
-    .eq('id', openId as string);
+    .eq('id', openId as string)
+    .select('id');
   if (error) return { ok: false, error: error.message };
+  if (!linhasJornada || linhasJornada.length === 0) {
+    return { ok: false, error: 'Não foi possível encerrar o dia. Tente novamente.' };
+  }
 
   revalidatePath('/minha-agenda');
   revalidatePath('/dashboard');
