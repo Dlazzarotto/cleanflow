@@ -26,18 +26,39 @@ function usd(n: number) {
   return Number(n).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
 
-export default async function EstimatesPage() {
+const GRUPOS = [
+  { chave: 'aberto', rotulo: 'Em aberto', statuses: ['rascunho', 'enviado'] },
+  { chave: 'aprovado', rotulo: 'Aprovados', statuses: ['aprovado'] },
+  { chave: 'recusado', rotulo: 'Recusados', statuses: ['recusado'] },
+  { chave: 'todos', rotulo: 'Todos', statuses: ['rascunho', 'enviado', 'aprovado', 'recusado'] },
+];
+
+export default async function EstimatesPage({
+  searchParams,
+}: {
+  searchParams: { grupo?: string };
+}) {
   await requireManager();
   const supabase = createClient();
-  const [{ data: estimates }, settings, { data: teamRows }] = await Promise.all([
-    supabase
-      .from('estimates')
-      .select('*, clients(full_name)')
-      .order('created_at', { ascending: false })
-      .limit(50),
-    getPricingSettings(),
-    supabase.from('teams').select('id, name').eq('active', true).order('name'),
-  ]);
+
+  const grupo = GRUPOS.find((g) => g.chave === searchParams.grupo) ?? GRUPOS[0];
+
+  const [{ data: estimates }, settings, { data: teamRows }, { data: contagem }] =
+    await Promise.all([
+      supabase
+        .from('estimates')
+        .select('*, clients(full_name)')
+        .in('status', grupo.statuses)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      getPricingSettings(),
+      supabase.from('teams').select('id, name').eq('active', true).order('name'),
+      supabase.from('estimates').select('status'),
+    ]);
+
+  const todos = (contagem ?? []) as any[];
+  const contar = (statuses: string[]) =>
+    todos.filter((e) => statuses.includes(e.status)).length;
   const teamOptions = (teamRows ?? []).map((t: any) => ({ id: t.id, name: t.name }));
 
   return (
@@ -46,6 +67,22 @@ export default async function EstimatesPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">Estimates</h1>
         <Link href="/estimates/novo" className="btn-primary">+ Novo estimate</Link>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {GRUPOS.map((g) => (
+          <Link
+            key={g.chave}
+            href={`/estimates?grupo=${g.chave}`}
+            className={`flex min-h-touch items-center rounded-card border px-4 py-2 font-medium ${
+              grupo.chave === g.chave
+                ? 'border-brand-700 bg-brand-900 text-white'
+                : 'border-brand-100 bg-white text-brand-800'
+            }`}
+          >
+            {g.rotulo} ({contar(g.statuses)})
+          </Link>
+        ))}
       </div>
 
       <details className="card mb-6">
@@ -89,8 +126,16 @@ export default async function EstimatesPage() {
 
       {(!estimates || estimates.length === 0) ? (
         <div className="card text-brand-800">
-          Nenhum estimate ainda.{' '}
-          <Link href="/estimates/novo" className="font-semibold text-brand-700 underline">Criar o primeiro</Link>
+          {grupo.chave === 'aberto'
+            ? 'Nenhum estimate aguardando resposta. Os aprovados e recusados estão nas outras abas.'
+            : grupo.chave === 'aprovado'
+              ? 'Nenhum estimate aprovado ainda.'
+              : grupo.chave === 'recusado'
+                ? 'Nenhum estimate recusado.'
+                : 'Nenhum estimate criado ainda.'}{' '}
+          <Link href="/estimates/novo" className="font-semibold text-brand-700 underline">
+            Criar um novo
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
