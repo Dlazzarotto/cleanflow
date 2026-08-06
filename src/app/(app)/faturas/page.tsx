@@ -285,9 +285,8 @@ export default async function FaturasPage({
               </div>
 
               {(() => {
-                const esperado = Number(
-                  inv.bookings?.price || inv.clients?.default_price || 0
-                );
+                // Fonte de verdade: o valor atual no cadastro do cliente
+                const esperado = Number(inv.clients?.default_price ?? 0);
                 const divergente =
                   inv.status !== 'paga' &&
                   esperado > 0 &&
@@ -295,7 +294,7 @@ export default async function FaturasPage({
                 return divergente ? (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-card bg-sun/20 p-3">
                     <span className="text-brand-900">
-                      ⚠️ O cadastro deste cliente indica {usd(esperado)} — a fatura está com{' '}
+                      ⚠️ O cadastro deste cliente está em {usd(esperado)} e esta fatura ficou com{' '}
                       {usd(inv.amount)}.
                     </span>
                     <form action={recalcInvoiceAction.bind(null, inv.id)}>
