@@ -6,8 +6,9 @@ export function accessEmailHtml(params: {
   email: string;
   password: string | null;
   isReset: boolean;
+  trackingUrl?: string | null;
 }) {
-  const { fullName, companyName, loginUrl, email, password, isReset } = params;
+  const { fullName, companyName, loginUrl, email, password, isReset, trackingUrl } = params;
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#122221;font-size:16px;line-height:1.5;">
     <div style="background:#083A38;color:#ffffff;padding:24px;border-radius:12px 12px 0 0;">
@@ -30,8 +31,16 @@ export function accessEmailHtml(params: {
         Por segurança, troque sua senha assim que entrar: menu <strong>Configurações → Trocar senha</strong>.
         Não compartilhe estes dados com ninguém.
       </p>
+      <div style="background:#EFFAF9;border-radius:12px;padding:16px;margin:16px 0;">
+        <p style="margin:0;font-weight:bold;color:#0C4B48;">📲 Deixe na tela do seu celular</p>
+        <p style="margin:6px 0 0;font-size:14px;">
+          Assim o sistema abre como aplicativo, sem precisar procurar o link:
+          <a href="${loginUrl.replace('/login', '/instalar')}">ver como instalar</a>
+        </p>
+      </div>
       <p style="margin-top:20px;">Equipe ${companyName}</p>
     </div>
+    ${trackingUrl ? `<img src="${trackingUrl}" width="1" height="1" alt="" style="display:none;" />` : ''}
   </div>`;
 }
 

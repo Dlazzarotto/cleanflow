@@ -84,6 +84,13 @@ export default function AppShell({
         </Link>
       )}
 
+      <a
+        href="/instalar"
+        className="mx-5 mb-3 flex min-h-touch items-center justify-center gap-2 rounded-card border border-brand-100/40 px-4 text-brand-100"
+      >
+        📲 Instalar no celular
+      </a>
+
       <form action="/api/logout" method="post" className="px-5 pb-5">
         <button className="btn-ghost w-full !border-brand-100 !text-brand-100 hover:!bg-brand-800">
           Sair

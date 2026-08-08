@@ -61,6 +61,9 @@ export default function InstallPrompt() {
             Instalar agora
           </button>
         )}
+        <a className="btn-ghost" href="/instalar">
+          Como instalar
+        </a>
         <button className="btn-ghost" type="button" onClick={dispensar}>
           Agora não
         </button>
