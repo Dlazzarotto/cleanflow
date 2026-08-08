@@ -2,13 +2,12 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { requireMarketingAccess } from '@/lib/auth';
 import { createClientAction } from '@/lib/actions';
 import { PAYMENT_METHODS } from '@/lib/billing';
-import BackLink from '@/components/BackLink';
+import ClientTypeFields from '@/components/ClientTypeFields';
 
 export default async function NovoClientePage() {
   const { role: myRole } = await requireMarketingAccess();
   return (
     <div className="max-w-2xl">
-      <BackLink href="/clientes" label="Clientes" />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Novo cliente</h1>
       <form action={createClientAction} className="card space-y-4">
         <div>

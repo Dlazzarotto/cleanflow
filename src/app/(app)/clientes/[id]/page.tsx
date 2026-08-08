@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { STATUS_LABEL, CLIENT_STATUS_LABEL, type Booking, type Client } from '@/lib/types';
 import { PAYMENT_LABEL, CONTRACT_LABEL } from '@/lib/billing';
-import BackLink from '@/components/BackLink';
+import { SEGMENT_LABEL, PAYMENT_TERMS_LABEL } from '@/lib/commercial';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,14 +36,6 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
   if (!client) notFound();
   if (myRole === 'marketing' && (client as any).created_by !== myId) redirect('/marketing');
   const c = client as Client;
-
-  // Nome da equipe do cliente (consulta separada para não quebrar a ficha)
-  let equipeNome: string | null = null;
-  const teamId = (c as any).preferred_team_id;
-  if (teamId) {
-    const { data: t } = await supabase.from('teams').select('name').eq('id', teamId).single();
-    equipeNome = t?.name ?? null;
-  }
   const history = (bookings ?? []) as Booking[];
 
   const info: Array<[string, string | null]> = [
@@ -54,7 +46,6 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
     ['Pets', c.has_pets ? (c.pets_notes ?? 'Sim') : 'Não'],
     ['Produtos', c.products_notes],
     ['Frequência', c.frequency],
-    ['Equipe responsável', equipeNome],
     ...(isMkt
       ? []
       : ([
@@ -66,7 +57,6 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
 
   return (
     <div className="max-w-3xl">
-      <BackLink href="/clientes" label="Clientes" />
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-brand-900">{c.full_name}</h1>
         <Link href={`/clientes/${c.id}/editar`} className="btn-ghost">✏️ Editar</Link>

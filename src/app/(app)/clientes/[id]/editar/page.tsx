@@ -6,7 +6,7 @@ import { updateClientAction } from '@/lib/actions';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { PAYMENT_METHODS, CONTRACT_STATUS } from '@/lib/billing';
 import type { Client } from '@/lib/types';
-import BackLink from '@/components/BackLink';
+import ClientTypeFields from '@/components/ClientTypeFields';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,6 @@ export default async function EditarClientePage({ params }: { params: { id: stri
 
   return (
     <div className="max-w-2xl">
-      <BackLink href={`/clientes/${c.id}`} label={c.full_name} />
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Editar cliente</h1>
       <form action={updateClientAction.bind(null, c.id)} className="card space-y-4">
         <div>
@@ -117,15 +116,6 @@ export default async function EditarClientePage({ params }: { params: { id: stri
                 </select>
               </div>
             </div>
-            <label className="mt-3 flex min-h-touch cursor-pointer items-center gap-3 font-medium text-brand-800">
-              <input
-                type="checkbox"
-                name="sms_opt_in"
-                className="h-5 w-5 accent-brand-700"
-                defaultChecked={(c as any).sms_opt_in ?? true}
-              />
-              📱 Aceita receber lembretes e faturas por SMS
-            </label>
             <div className="mt-3">
               <label className="label" htmlFor="payment_notes">Observações de pagamento</label>
               <input className="input" id="payment_notes" name="payment_notes" defaultValue={(c as any).payment_notes ?? ''} placeholder="Ex: Venmo @maria-silva · paga sempre no dia" />

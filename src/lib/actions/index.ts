@@ -42,6 +42,16 @@ export async function createClientAction(formData: FormData) {
     ...(formData.has('preferred_team_id')
       ? { preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null }
       : {}),
+    client_type: String(formData.get('client_type') ?? 'residencial'),
+    business_segment: String(formData.get('business_segment') ?? '') || null,
+    area_sqft: String(formData.get('area_sqft') ?? '') === '' ? null : Number(formData.get('area_sqft')),
+    contact_role: String(formData.get('contact_role') ?? '') || null,
+    access_notes: String(formData.get('access_notes') ?? '') || null,
+    billing_type: String(formData.get('billing_type') ?? 'por_limpeza'),
+    monthly_contract_value: String(formData.get('monthly_contract_value') ?? '') === ''
+      ? null
+      : Number(formData.get('monthly_contract_value')),
+    payment_terms: String(formData.get('payment_terms') ?? '') || null,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/clientes');
@@ -322,6 +332,17 @@ export async function updateClientAction(id: string, formData: FormData) {
       payment_notes: String(formData.get('payment_notes') ?? '') || null,
       sms_opt_in: formData.get('sms_opt_in') === 'on',
       marketing_opt_in: formData.get('marketing_opt_in') === 'on',
+      client_type: String(formData.get('client_type') ?? 'residencial'),
+      business_segment: String(formData.get('business_segment') ?? '') || null,
+      area_sqft: String(formData.get('area_sqft') ?? '') === '' ? null : Number(formData.get('area_sqft')),
+      contact_role: String(formData.get('contact_role') ?? '') || null,
+      access_notes: String(formData.get('access_notes') ?? '') || null,
+      billing_type: String(formData.get('billing_type') ?? 'por_limpeza'),
+      monthly_contract_value: String(formData.get('monthly_contract_value') ?? '') === ''
+        ? null
+        : Number(formData.get('monthly_contract_value')),
+      payment_terms: String(formData.get('payment_terms') ?? '') || null,
+
       ...(formData.has('preferred_team_id')
         ? { preferred_team_id: String(formData.get('preferred_team_id') ?? '') || null }
         : {}),
