@@ -1,13 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
-import {
-  markInvoicePaidAction,
-  setInvoiceStatusAction,
-  refreshOverdueAction,
-  updateInvoiceAction,
-  recalcInvoiceAction,
-} from '@/lib/actions/invoices';
+import { markInvoicePaidAction, setInvoiceStatusAction, refreshOverdueAction } from '@/lib/actions/invoices';
 import { PAYMENT_METHODS, PAYMENT_LABEL } from '@/lib/billing';
 import SendInvoiceButton from '@/components/SendInvoiceButton';
 import {
@@ -16,6 +10,7 @@ import {
   updateExtraCatalogAction,
   createStandaloneInvoiceAction,
 } from '@/lib/actions/extras';
+import { getModo, ROTULOS } from '@/lib/mode';
 import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +38,20 @@ export default async function FaturasPage({
     ? searchParams.status!
     : 'aberta';
 
+  const modo = await getModo();
   const supabase = createClient();
+
+  // Só os clientes deste modo (residencial ou comercial)
+  const { data: idsModo } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('client_type', modo);
+  const clientesDoModo = (idsModo ?? []).map((c: any) => c.id);
+
   let query = supabase
     .from('invoices')
-    .select('*, clients(full_name, email, payment_method, default_price), bookings(scheduled_at, price, service_type)')
+    .select('*, clients(full_name, email, payment_method), bookings(scheduled_at)')
+    .in('client_id', clientesDoModo)
     .order('number', { ascending: false })
     .limit(150);
   if (filtro === 'aberta') query = query.in('status', ['aberta', 'vencida']);
@@ -284,28 +289,6 @@ export default async function FaturasPage({
                 <p className="text-3xl font-bold text-brand-900">{usd(inv.amount)}</p>
               </div>
 
-              {(() => {
-                // Fonte de verdade: o valor atual no cadastro do cliente
-                const esperado = Number(inv.clients?.default_price ?? 0);
-                const divergente =
-                  inv.status !== 'paga' &&
-                  esperado > 0 &&
-                  Math.abs(Number(inv.amount) - esperado) > 0.01;
-                return divergente ? (
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-card bg-sun/20 p-3">
-                    <span className="text-brand-900">
-                      ⚠️ O cadastro deste cliente está em {usd(esperado)} e esta fatura ficou com{' '}
-                      {usd(inv.amount)}.
-                    </span>
-                    <form action={recalcInvoiceAction.bind(null, inv.id)}>
-                      <button className="btn-primary" type="submit">
-                        Atualizar para {usd(esperado)}
-                      </button>
-                    </form>
-                  </div>
-                ) : null;
-              })()}
-
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-brand-100 pt-3">
                 <a
                   href={`/fatura/${inv.public_token}`}
@@ -338,54 +321,6 @@ export default async function FaturasPage({
                     </form>
                   </>
                 )}
-                {inv.status !== 'paga' && inv.status !== 'cancelada' && (
-                  <details className="w-full">
-                    <summary className="btn-ghost inline-block cursor-pointer">
-                      ✏️ Editar fatura
-                    </summary>
-                    <form action={updateInvoiceAction} className="mt-3 grid gap-3 rounded-card bg-brand-50 p-3 md:grid-cols-4">
-                      <input type="hidden" name="id" value={inv.id} />
-                      <div>
-                        <label className="label" htmlFor={`am-${inv.id}`}>Valor (USD)</label>
-                        <input
-                          className="input"
-                          id={`am-${inv.id}`}
-                          name="amount"
-                          type="number"
-                          min={0}
-                          step={5}
-                          defaultValue={Number(inv.amount)}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="label" htmlFor={`ds-${inv.id}`}>Descrição</label>
-                        <input
-                          className="input"
-                          id={`ds-${inv.id}`}
-                          name="description"
-                          placeholder="Ex: Limpeza de manutenção"
-                        />
-                      </div>
-                      <div>
-                        <label className="label" htmlFor={`dt-${inv.id}`}>Vencimento</label>
-                        <input
-                          className="input"
-                          id={`dt-${inv.id}`}
-                          name="due_at"
-                          type="date"
-                          defaultValue={inv.due_at ?? ''}
-                        />
-                      </div>
-                      <div className="md:col-span-4 flex flex-wrap gap-2">
-                        <button className="btn-primary" type="submit">Salvar fatura</button>
-                        <span className="self-center text-sm text-brand-800">
-                          Se já enviou ao cliente, reenvie depois de alterar.
-                        </span>
-                      </div>
-                    </form>
-                  </details>
-                )}
-
                 {inv.status === 'paga' && (
                   <>
                     <span className="text-brand-800">

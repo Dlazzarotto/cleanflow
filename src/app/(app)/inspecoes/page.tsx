@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireManager } from '@/lib/auth';
 import { startInspectionAction } from '@/lib/actions/inspections';
 import BackLink from '@/components/BackLink';
+import { getModo, ROTULOS } from '@/lib/mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,16 +23,26 @@ const SITUACAO: Record<string, string> = {
 
 export default async function InspecoesPage() {
   await requireManager();
+  const modo = await getModo();
   const supabase = createClient();
+
+  // Só os clientes deste modo (residencial ou comercial)
+  const { data: idsModo } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('client_type', modo);
+  const clientesDoModo = (idsModo ?? []).map((c: any) => c.id);
+
 
   const [{ data: inspecoes }, { data: modelos }, { data: clientes }] = await Promise.all([
     supabase
       .from('inspections')
       .select('*, clients(full_name)')
+      .in('client_id', clientesDoModo)
       .order('created_at', { ascending: false })
       .limit(60),
     supabase.from('inspection_templates').select('id, name, segment').eq('active', true).order('name'),
-    supabase.from('clients').select('id, full_name').eq('status', 'ativo').order('full_name'),
+    supabase.from('clients').select('id, full_name').eq('status', 'ativo').eq('client_type', modo).order('full_name'),
   ]);
 
   const lista = (inspecoes ?? []) as any[];

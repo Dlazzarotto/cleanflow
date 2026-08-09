@@ -5,6 +5,7 @@ import { STATUS_LABEL, type Booking, type BookingStatus } from '@/lib/types';
 import { SERVICE_TYPE_LABEL } from '@/lib/pricing';
 import { updateBookingStatusAction } from '@/lib/actions';
 import BackLink from '@/components/BackLink';
+import { getModo, ROTULOS } from '@/lib/mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,17 @@ interface Item {
 
 export default async function AgendamentosPage() {
   await requireManager();
+  const modo = await getModo();
+  const rot = ROTULOS[modo];
   const supabase = createClient();
+
+  // Só os clientes deste modo (residencial ou comercial)
+  const { data: idsModo } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('client_type', modo);
+  const clientesDoModo = (idsModo ?? []).map((c: any) => c.id);
+
 
   const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const to = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -30,6 +41,7 @@ export default async function AgendamentosPage() {
   const { data } = await supabase
     .from('bookings')
     .select('*, clients(full_name, address), teams(name, color)')
+    .in('client_id', clientesDoModo)
     .gte('scheduled_at', from)
     .lte('scheduled_at', to)
     .order('scheduled_at');
@@ -45,6 +57,7 @@ export default async function AgendamentosPage() {
     const { data: futureSeries } = await supabase
       .from('bookings')
       .select('series_id')
+      .in('client_id', clientesDoModo)
       .in('series_id', seriesIds)
       .gte('scheduled_at', from)
       .neq('status', 'cancelado');
@@ -121,12 +134,6 @@ export default async function AgendamentosPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/calendario?dia=${new Date(b.scheduled_at).toISOString().slice(0, 10)}&abrir=${b.id}`}
-                    className="btn-ghost"
-                  >
-                    ✏️ Editar
-                  </Link>
                   {b.type === 'visita' && (
                     <Link href={`/estimates/novo?cliente=${b.client_id}`} className="btn-ghost">
                       🧮 Criar estimate

@@ -2,41 +2,46 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * GET /api/bookings?start=ISO&end=ISO
- * Lista limpezas do periodo (para o calendario).
+ * GET /api/bookings?start=...&end=...
+ * Limpezas do período, filtradas pelo modo ativo (residencial ou comercial).
  */
 export async function GET(request: Request) {
-  // Auditoria: rota administrativa — exige papel de gestao
-  try {
-    const { getAuth, isManager } = await import('@/lib/auth');
-    const ctx = await getAuth();
-    if (!isManager(ctx.role)) {
-      return NextResponse.json({ error: 'Acesso restrito à gestão.' }, { status: 403 });
-    }
-  } catch {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const start = searchParams.get('start');
-  const end = searchParams.get('end');
-  if (!start || !end) {
-    return NextResponse.json({ error: 'start e end são obrigatórios' }, { status: 400 });
-  }
-
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
+  const url = new URL(request.url);
+  const start = url.searchParams.get('start');
+  const end = url.searchParams.get('end');
+  if (!start || !end) {
+    return NextResponse.json({ error: 'Informe start e end' }, { status: 400 });
+  }
+
+  // Modo ativo: o calendário mostra só o que pertence a ele
+  const { data: modo } = await supabase.rpc('current_mode');
+  const tipo = modo === 'comercial' ? 'comercial' : 'residencial';
+
+  const { data: idsModo } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('client_type', tipo);
+  const clientesDoModo = (idsModo ?? []).map((c: any) => c.id);
+
+  if (clientesDoModo.length === 0) {
+    return NextResponse.json({ bookings: [] });
+  }
+
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, client_id, team_id, series_id, scheduled_at, duration_minutes, price, status, notes, clients(full_name, address), teams(name, color)')
+    .select('*, clients(full_name, address, client_type), teams(name, color)')
+    .in('client_id', clientesDoModo)
     .gte('scheduled_at', start)
-    .lte('scheduled_at', end)
+    .lt('scheduled_at', end)
     .order('scheduled_at');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
   return NextResponse.json({ bookings: data ?? [] });
 }

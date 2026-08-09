@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import CompanySwitcher, { type CompanyOption } from '@/components/CompanySwitcher';
+import ModeSwitcher from '@/components/ModeSwitcher';
 
 export interface NavItem {
   href: string;
@@ -17,6 +18,8 @@ export default function AppShell({
   companyId,
   empresas,
   isPlatformAdmin,
+  modo = 'residencial',
+  temComercial = false,
   children,
 }: {
   nav: NavItem[];
@@ -25,6 +28,8 @@ export default function AppShell({
   companyId: string | null;
   empresas: CompanyOption[];
   isPlatformAdmin: boolean;
+  modo?: 'residencial' | 'comercial';
+  temComercial?: boolean;
   children: React.ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -57,6 +62,8 @@ export default function AppShell({
 
       {companyId && <CompanySwitcher empresas={empresas} atual={companyId} />}
 
+      <ModeSwitcher modo={modo} temComercial={temComercial} />
+
       <nav className="flex-1 overflow-y-auto pb-4">
         {nav.map((item) => {
           const ativo = caminho === item.href || caminho.startsWith(item.href + '/');
@@ -84,13 +91,6 @@ export default function AppShell({
         </Link>
       )}
 
-      <a
-        href="/instalar"
-        className="mx-5 mb-3 flex min-h-touch items-center justify-center gap-2 rounded-card border border-brand-100/40 px-4 text-brand-100"
-      >
-        📲 Instalar no celular
-      </a>
-
       <form action="/api/logout" method="post" className="px-5 pb-5">
         <button className="btn-ghost w-full !border-brand-100 !text-brand-100 hover:!bg-brand-800">
           Sair
@@ -102,7 +102,11 @@ export default function AppShell({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Barra superior — só no celular */}
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-brand-900 px-4 py-3 text-white md:hidden print:hidden">
+      <header
+        className={`sticky top-0 z-30 flex items-center justify-between px-4 py-3 text-white md:hidden print:hidden ${
+          modo === 'comercial' ? 'bg-brand-800' : 'bg-brand-900'
+        }`}
+      >
         <button
           type="button"
           onClick={() => setAberto(true)}
@@ -120,6 +124,11 @@ export default function AppShell({
           <span className="block truncate font-semibold">
             {atual ? `${atual.icon} ${atual.label}` : 'CleanFlow'}
           </span>
+          {temComercial && (
+            <span className="block text-xs text-brand-100">
+              {modo === 'comercial' ? '🏢 Comercial' : '🏠 Residencial'}
+            </span>
+          )}
         </span>
 
         <span className="h-11 w-11" aria-hidden />
