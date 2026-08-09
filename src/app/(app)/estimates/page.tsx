@@ -51,6 +51,11 @@ export default async function EstimatesPage() {
   ]);
   const teamOptions = (teamRows ?? []).map((t: any) => ({ id: t.id, name: t.name }));
 
+  // Propostas do modo ativo (as sem cliente vinculado aparecem nos dois)
+  const estimatesDoModo = ((estimates ?? []) as any[]).filter(
+    (e) => !e.client_id || (e.clients?.client_type ?? 'residencial') === modo
+  );
+
   return (
     <div>
       <BackLink href="/dashboard" label="Dashboard" />
