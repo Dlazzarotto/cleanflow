@@ -4,9 +4,10 @@ import { SEGMENTS, CLIENT_TYPES, BILLING_TYPES, PAYMENT_TERMS } from '@/lib/comm
 
 /**
  * Residencial e comercial pedem informações diferentes.
- * Este bloco troca os campos conforme o tipo escolhido.
+ * O tipo comercial só fica disponível para quem contratou o módulo.
  */
 export default function ClientTypeFields({
+  hasCommercial = false,
   clientType = 'residencial',
   segment = '',
   areaSqft = null,
@@ -16,6 +17,7 @@ export default function ClientTypeFields({
   monthlyValue = null,
   paymentTerms = '',
 }: {
+  hasCommercial?: boolean;
   clientType?: string;
   segment?: string;
   areaSqft?: number | null;
@@ -33,29 +35,48 @@ export default function ClientTypeFields({
       <p className="mb-3 font-semibold text-brand-900">🏢 Tipo de cliente</p>
 
       <div className="flex flex-wrap gap-2">
-        {CLIENT_TYPES.map((t) => (
-          <label
-            key={t.key}
-            className={`flex min-h-touch cursor-pointer items-center gap-2 rounded-card border-2 px-4 py-2 font-medium ${
-              tipo === t.key
-                ? 'border-brand-700 bg-white text-brand-900'
-                : 'border-brand-100 bg-white/50 text-brand-800'
-            }`}
-          >
-            <input
-              type="radio"
-              name="client_type"
-              value={t.key}
-              checked={tipo === t.key}
-              onChange={() => setTipo(t.key)}
-              className="h-4 w-4 accent-brand-700"
-            />
-            {t.label}
-          </label>
-        ))}
+        {CLIENT_TYPES.map((t) => {
+          const bloqueado = t.key === 'comercial' && !hasCommercial;
+          return (
+            <label
+              key={t.key}
+              className={`flex min-h-touch items-center gap-2 rounded-card border-2 px-4 py-2 font-medium ${
+                bloqueado
+                  ? 'cursor-not-allowed border-brand-100 bg-white/30 text-brand-800 opacity-60'
+                  : tipo === t.key
+                    ? 'cursor-pointer border-brand-700 bg-white text-brand-900'
+                    : 'cursor-pointer border-brand-100 bg-white/50 text-brand-800'
+              }`}
+            >
+              <input
+                type="radio"
+                name="client_type"
+                value={t.key}
+                checked={tipo === t.key}
+                disabled={bloqueado}
+                onChange={() => !bloqueado && setTipo(t.key)}
+                className="h-4 w-4 accent-brand-700"
+              />
+              {t.label}
+              {bloqueado && <span className="text-sm">🔒</span>}
+            </label>
+          );
+        })}
       </div>
 
-      {tipo === 'comercial' && (
+      {!hasCommercial && (
+        <div className="mt-3 rounded-card bg-white p-4">
+          <p className="font-semibold text-brand-900">
+            🔒 Limpeza comercial é um módulo à parte
+          </p>
+          <p className="mt-1 text-sm text-brand-800">
+            Atenda escritórios, restaurantes, lojas, academias e clínicas com orçamento por área,
+            contrato mensal e prazos de pagamento. Fale com o CleanFlow para ativar.
+          </p>
+        </div>
+      )}
+
+      {tipo === 'comercial' && hasCommercial && (
         <div className="mt-4 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
