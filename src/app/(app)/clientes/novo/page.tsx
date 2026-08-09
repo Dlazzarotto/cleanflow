@@ -78,6 +78,10 @@ export default async function NovoClientePage() {
           </div>
         </div>
         {myRole !== 'marketing' && (
+          <ClientTypeFields hasCommercial={Boolean(temComercial)} />
+        )}
+
+        {myRole !== 'marketing' && (
           <label className="flex min-h-touch cursor-pointer items-center gap-3 rounded-card bg-brand-50 px-4">
             <input type="checkbox" name="from_marketing" className="h-5 w-5 accent-brand-700" />
             <span>

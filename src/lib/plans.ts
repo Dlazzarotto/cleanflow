@@ -59,3 +59,22 @@ export function monthlyFee(plan: string, extraTeams = 0): number {
 export function planName(plan: string): string {
   return PLANS[(plan as PlanKey) in PLANS ? (plan as PlanKey) : 'standard'].name;
 }
+
+
+// ---------- Módulo de limpeza comercial (contratado à parte) ----------
+export const COMMERCIAL_MODULE = {
+  key: 'comercial',
+  name: 'Limpeza Comercial',
+  price: 20,
+  highlights: [
+    'Escritórios, restaurantes, lojas, academias, clínicas e mais',
+    'Catálogo de áreas por segmento (cozinha industrial, coifa, câmara fria…)',
+    'Contrato mensal fixo e prazos net 15/30/45',
+    'Instruções de acesso e contato do responsável no local',
+  ],
+};
+
+/** Mensalidade final, somando o módulo comercial quando contratado. */
+export function totalMonthly(plan: string, extraTeams = 0, comercial = false, precoComercial = 20) {
+  return monthlyFee(plan, extraTeams) + (comercial ? precoComercial : 0);
+}

@@ -149,6 +149,34 @@ export default async function AdminCompanyPage({ params }: { params: { id: strin
           </div>
         </div>
 
+        <div className="rounded-card bg-brand-50 p-4">
+          <p className="mb-3 font-semibold text-brand-900">🏢 Módulo de Limpeza Comercial</p>
+          <label className="flex min-h-touch cursor-pointer items-center gap-3 font-medium text-brand-800">
+            <input
+              type="checkbox"
+              name="commercial_enabled"
+              className="h-5 w-5 accent-brand-700"
+              defaultChecked={Boolean(c.commercial_enabled)}
+            />
+            Empresa contratou o módulo comercial
+          </label>
+          <div className="mt-3 max-w-xs">
+            <label className="label" htmlFor="commercial_price">Valor do módulo (USD/mês)</label>
+            <input
+              className="input"
+              id="commercial_price"
+              name="commercial_price"
+              type="number"
+              min={0}
+              step={5}
+              defaultValue={c.commercial_price ?? 20}
+            />
+            <p className="mt-1 text-sm text-brand-800">
+              Use 0 para liberar sem cobrar (cortesia ou período de teste).
+            </p>
+          </div>
+        </div>
+
         <div>
           <label className="label" htmlFor="platform_notes">Anotações internas (só você vê)</label>
           <textarea className="input" id="platform_notes" name="platform_notes" rows={3} defaultValue={c.platform_notes ?? ''} />

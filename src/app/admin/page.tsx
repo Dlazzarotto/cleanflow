@@ -250,6 +250,11 @@ export default async function AdminHomePage() {
                     <span className={`rounded-full px-3 py-1 font-medium ${badge.cls}`}>
                       {badge.label}
                     </span>
+                    {e.commercial_enabled && (
+                      <span className="rounded-full bg-brand-900 px-3 py-1 font-medium text-white">
+                        🏢 Comercial
+                      </span>
+                    )}
                     <span className="rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-800">
                       {planName(e.plan)}
                       {e.extra_teams > 0 ? ` +${e.extra_teams}` : ''}
