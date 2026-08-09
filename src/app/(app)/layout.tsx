@@ -1,7 +1,7 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getPlatformAdmin } from '@/lib/platform';
-import AppShell from '@/components/AppShell';
 
 const MANAGER_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -14,6 +14,7 @@ const MANAGER_NAV = [
   { href: '/marketing', label: 'Marketing', icon: '📣' },
   { href: '/campanhas', label: 'Campanhas', icon: '🔗' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
+  { href: '/inspecoes', label: 'Inspeções', icon: '🔍' },
   { href: '/ocorrencias', label: 'Ocorrências', icon: '⚠️' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/mapa', label: 'Mapa', icon: '🗺️' },
@@ -58,19 +59,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     await supabase.rpc('touch_my_membership');
   }
 
-  // Empresas em que a pessoa tem vínculo ativo (agência de marketing pode ter várias)
-  const { data: vinculos } = await supabase
-    .from('memberships')
-    .select('company_id, role, companies(name)')
-    .eq('user_id', user.id)
-    .eq('active', true);
-
-  const empresas = (vinculos ?? []).map((v: any) => ({
-    id: v.company_id,
-    name: v.companies?.name ?? 'Empresa',
-    role: v.role,
-  }));
-
   const accountStatus = (membership as any)?.companies?.account_status ?? 'ativa';
   if (accountStatus === 'suspensa' || accountStatus === 'cancelada') {
     return (
@@ -94,15 +82,44 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const nav = role === 'cleaner' ? CLEANER_NAV : role === 'marketing' ? MARKETING_NAV : MANAGER_NAV;
 
   return (
-    <AppShell
-      nav={nav}
-      companyName={companyName}
-      personName={(membership as any)?.full_name ?? null}
-      companyId={(companyId as string) ?? null}
-      empresas={empresas}
-      isPlatformAdmin={Boolean(platform)}
-    >
-      {children}
-    </AppShell>
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <aside className="bg-brand-900 text-white md:w-64 md:shrink-0 print:hidden">
+        <div className="p-5">
+          <p className="text-2xl font-bold">
+            Clean<span className="text-aqua-400">Flow</span>
+          </p>
+          <p className="mt-1 text-brand-100 text-sm">{companyName}</p>
+          {(membership as any)?.full_name && (
+            <p className="text-brand-100 text-sm">{(membership as any).full_name}</p>
+          )}
+        </div>
+        <nav className="flex overflow-x-auto md:block">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex min-h-touch items-center gap-3 px-5 py-3 hover:bg-brand-800 whitespace-nowrap"
+            >
+              <span aria-hidden>{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        {platform && (
+          <Link
+            href="/admin"
+            className="mx-5 mt-3 flex min-h-touch items-center justify-center gap-2 rounded-card border border-aqua-400 px-4 text-aqua-400"
+          >
+            ⚙️ Painel CleanFlow
+          </Link>
+        )}
+        <form action="/api/logout" method="post" className="p-5">
+          <button className="btn-ghost w-full !border-brand-100 !text-brand-100 hover:!bg-brand-800">
+            Sair
+          </button>
+        </form>
+      </aside>
+      <main className="flex-1 p-5 md:p-8 print:p-0">{children}</main>
+    </div>
   );
 }
