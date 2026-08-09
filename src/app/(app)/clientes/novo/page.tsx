@@ -1,4 +1,5 @@
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { createClient } from '@/lib/supabase/server';
 import { requireMarketingAccess } from '@/lib/auth';
 import { createClientAction } from '@/lib/actions';
 import { PAYMENT_METHODS } from '@/lib/billing';
@@ -6,6 +7,10 @@ import ClientTypeFields from '@/components/ClientTypeFields';
 
 export default async function NovoClientePage() {
   const { role: myRole } = await requireMarketingAccess();
+
+  const supabase = createClient();
+  const { data: temComercial } = await supabase.rpc('has_commercial');
+
   return (
     <div className="max-w-2xl">
       <h1 className="mb-6 text-3xl font-bold text-brand-900">Novo cliente</h1>
