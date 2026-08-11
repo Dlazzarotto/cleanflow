@@ -37,7 +37,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/c/') ||
     request.nextUrl.pathname.startsWith('/assine/') ||
     request.nextUrl.pathname.startsWith('/instalar') ||
-    request.nextUrl.pathname.startsWith('/inspecao/');
+    request.nextUrl.pathname.startsWith('/inspecao/') ||
+    request.nextUrl.pathname.startsWith('/proposta/');
 
   if (!user && !isLogin && !isApi && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url));

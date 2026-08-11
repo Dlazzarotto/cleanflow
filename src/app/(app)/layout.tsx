@@ -29,7 +29,7 @@ const NAV_COMERCIAL = [
   { href: '/agendamentos', label: 'Serviços', icon: '📋' },
   { href: '/clientes', label: 'Contratos', icon: '🏢' },
   { href: '/inspecoes', label: 'Inspeções', icon: '🔍' },
-  { href: '/estimates', label: 'Propostas', icon: '🧮' },
+  { href: '/comercial/propostas', label: 'Propostas', icon: '🧮' },
   { href: '/faturas', label: 'Faturas', icon: '🧾' },
   { href: '/equipes', label: 'Equipes', icon: '🧹' },
   { href: '/ocorrencias', label: 'Ocorrências', icon: '⚠️' },
