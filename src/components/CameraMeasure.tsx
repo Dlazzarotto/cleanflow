@@ -94,7 +94,7 @@ export default function CameraMeasure({
 
       let ultimoHit: Float32Array | null = null;
 
-      function aoTocar() {
+      const aoTocar = () => {
         if (!ultimoHit) return;
         if (!primeiroPontoRef.current) {
           primeiroPontoRef.current = ultimoHit.slice() as Float32Array;
@@ -118,7 +118,7 @@ export default function CameraMeasure({
         primeiroPontoRef.current = null;
         setPontos(0);
         setDistanciaAtual(null);
-      }
+      };
 
       sessao.addEventListener('select', aoTocar);
       sessao.addEventListener('end', () => {
@@ -126,7 +126,7 @@ export default function CameraMeasure({
         sessaoRef.current = null;
       });
 
-      function quadro(_t: number, frame: any) {
+      const quadro = (_t: number, frame: any) => {
         if (!sessaoRef.current) return;
         sessao.requestAnimationFrame(quadro);
 
@@ -146,7 +146,7 @@ export default function CameraMeasure({
             }
           }
         }
-      }
+      };
 
       sessao.requestAnimationFrame(quadro);
     } catch (e: any) {
