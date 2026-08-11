@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import CameraMeasure, { type ParedeMedida } from '@/components/CameraMeasure';
 
 export interface Comodo {
   id: string;
@@ -29,6 +30,28 @@ export default function AreaCalculator({
       : [{ id: '1', nome: '', comprimento: 0, largura: 0 }]
   );
   const [unidade, setUnidade] = useState<'pes' | 'metros' | 'passos'>('pes');
+  const [cameraAberta, setCameraAberta] = useState(false);
+
+  /** As paredes medidas viram comprimento e largura dos ambientes. */
+  function aplicarParedes(paredes: ParedeMedida[]) {
+    if (paredes.length === 0) return;
+    setUnidade('pes');
+    const novos: Comodo[] = [];
+    for (let i = 0; i < paredes.length; i += 2) {
+      const a = paredes[i];
+      const b = paredes[i + 1];
+      novos.push({
+        id: `cam-${a.id}`,
+        nome: `Ambiente ${novos.length + 1}`,
+        comprimento: a.pes,
+        largura: b ? b.pes : a.pes,
+      });
+    }
+    setComodos((prev) => {
+      const comDados = prev.filter((c) => c.comprimento && c.largura);
+      return [...comDados, ...novos];
+    });
+  }
 
   // Converte a medida informada para pés
   function paraPes(v: number) {
@@ -79,6 +102,31 @@ export default function AreaCalculator({
           >
             ×
           </button>
+        </div>
+
+        <CameraMeasure
+          aberto={cameraAberta}
+          aoFechar={() => setCameraAberta(false)}
+          aoConcluir={aplicarParedes}
+        />
+
+        {/* Medir com a câmera */}
+        <div className="mb-4 rounded-card border-2 border-aqua-500 p-4">
+          <p className="font-semibold text-brand-900">📷 Medir apontando a câmera</p>
+          <p className="mt-1 text-sm text-brand-800">
+            Aponte para o chão e toque nas pontas de cada parede — o sistema calcula sozinho.
+            Precisa de <strong>celular ou tablet com câmera</strong>.
+          </p>
+          <button
+            type="button"
+            className="btn-primary mt-3 w-full"
+            onClick={() => setCameraAberta(true)}
+          >
+            📷 Abrir a câmera
+          </button>
+          <p className="mt-2 text-center text-sm text-brand-800">
+            ou preencha as medidas abaixo
+          </p>
         </div>
 
         {/* Unidade */}

@@ -318,8 +318,12 @@ export default function CommercialEstimateForm({
             <div className="card">
               <p className="text-xl font-semibold text-brand-900">📐 Medir a área</p>
               <p className="mb-3 text-brand-800">
-                Meça cada ambiente e o sistema soma. Os itens cobrados por metragem usam esse
-                número — orçamento mais justo.
+                Meça apontando a câmera ou digite as medidas. Os itens cobrados por metragem usam
+                esse número — orçamento mais justo.
+              </p>
+              <p className="mb-3 rounded-card bg-brand-50 p-2 text-sm text-brand-800">
+                📱 A medição por câmera precisa de celular ou tablet com câmera. No computador,
+                digite as medidas.
               </p>
               <button
                 className="btn-primary w-full"
