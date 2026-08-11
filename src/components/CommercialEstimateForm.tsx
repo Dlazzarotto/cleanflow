@@ -5,6 +5,7 @@ import { SEGMENTS } from '@/lib/commercial';
 import { saveCommercialEstimateAction } from '@/lib/actions/commercial';
 import AreaCalculator, { type Comodo } from '@/components/AreaCalculator';
 import PhotoAnalyzer, { type Analise } from '@/components/PhotoAnalyzer';
+import CommercialMarketCheck from '@/components/CommercialMarketCheck';
 
 export interface CatalogoItem {
   id: string;
@@ -588,6 +589,17 @@ export default function CommercialEstimateForm({
               {suprimentos && ' · produtos inclusos'}
             </p>
           </div>
+
+          {/* Comparação com a região */}
+          <CommercialMarketCheck
+            segment={segmento}
+            endereco={endereco}
+            precoMensal={calculo.precoMes}
+            precoVisita={calculo.precoVisita}
+            minutos={calculo.minutos}
+            areaSqft={areaSqft ? Number(areaSqft) : null}
+            frequency={frequencia}
+          />
 
           {/* 5. Para quem */}
           <div className="card">
