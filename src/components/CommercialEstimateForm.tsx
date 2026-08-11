@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SEGMENTS } from '@/lib/commercial';
 import { saveCommercialEstimateAction } from '@/lib/actions/commercial';
+import AreaCalculator, { type Comodo } from '@/components/AreaCalculator';
+import PhotoAnalyzer, { type Analise } from '@/components/PhotoAnalyzer';
 
 export interface CatalogoItem {
   id: string;
@@ -77,6 +79,9 @@ export default function CommercialEstimateForm({
   const [suprimentos, setSuprimentos] = useState(true);
   const [taxaHora, setTaxaHora] = useState(hourlyRate);
   const [escolhidos, setEscolhidos] = useState<Record<string, Escolhido>>({});
+  const [calculadoraAberta, setCalculadoraAberta] = useState(false);
+  const [comodos, setComodos] = useState<Comodo[]>([]);
+  const [avisoIA, setAvisoIA] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -127,6 +132,24 @@ export default function CommercialEstimateForm({
     };
   }, [doSegmento, escolhidos, multGeral, noturno, taxaHora, suprimentos, visitasMes, equipe]);
 
+  function aplicarAnalise(a: Analise) {
+    const novo: Record<string, Escolhido> = {};
+    for (const i of a.itens) {
+      const existe = doSegmento.find((c) => c.id === i.id);
+      if (!existe) continue;
+      novo[i.id] = {
+        qty: Number(i.qty) > 0 ? Number(i.qty) : Number(existe.default_qty),
+        sujeira: ['leve', 'medio', 'pesado'].includes(i.sujeira) ? i.sujeira : sujeiraGeral,
+      };
+    }
+    if (Object.keys(novo).length > 0) setEscolhidos(novo);
+    if (a.area_estimada_sqft) setAreaSqft(String(a.area_estimada_sqft));
+    setAvisoIA(
+      `Análise aplicada: ${Object.keys(novo).length} item(ns) marcado(s)` +
+        (a.alerta ? ` · ${a.alerta}` : '')
+    );
+  }
+
   function marcar(c: CatalogoItem) {
     setEscolhidos((prev) => {
       const novo = { ...prev };
@@ -142,6 +165,24 @@ export default function CommercialEstimateForm({
       for (const c of doSegmento.filter((x) => x.area === area)) {
         if (marcar) novo[c.id] = novo[c.id] ?? { qty: Number(c.default_qty), sujeira: sujeiraGeral };
         else delete novo[c.id];
+      }
+      return novo;
+    });
+  }
+
+  /** Distribui a área medida entre os itens cobrados por metragem. */
+  function aplicarArea(total: number, lista: Comodo[]) {
+    setAreaSqft(String(total));
+    setComodos(lista);
+    setEscolhidos((prev) => {
+      const novo = { ...prev };
+      const emSqft = doSegmento.filter((c) => c.unit === 'sqft' && novo[c.id]);
+      if (emSqft.length === 0) return novo;
+      // Mantém a proporção original entre os itens de área
+      const somaPadrao = emSqft.reduce((s, c) => s + Number(c.default_qty), 0);
+      for (const c of emSqft) {
+        const fatia = somaPadrao > 0 ? Number(c.default_qty) / somaPadrao : 1 / emSqft.length;
+        novo[c.id] = { ...novo[c.id], qty: Math.round(total * fatia) };
       }
       return novo;
     });
@@ -225,6 +266,13 @@ export default function CommercialEstimateForm({
 
   return (
     <div className="space-y-4">
+      <AreaCalculator
+        aberto={calculadoraAberta}
+        aoFechar={() => setCalculadoraAberta(false)}
+        aoAplicar={aplicarArea}
+        areaInicial={comodos}
+      />
+
       {/* 1. Tipo de comércio */}
       <div className="card">
         <p className="mb-3 text-xl font-semibold text-brand-900">1. Que tipo de lugar é?</p>
@@ -235,7 +283,14 @@ export default function CommercialEstimateForm({
               type="button"
               onClick={() => {
                 setSegmento(s.key);
-                setEscolhidos({});
+                // Já traz marcado tudo o que costuma existir neste tipo de lugar
+                const itensDoTipo = catalogo.filter((c) => c.segment === s.key);
+                const inicial: Record<string, Escolhido> = {};
+                for (const c of itensDoTipo) {
+                  inicial[c.id] = { qty: Number(c.default_qty), sujeira: sujeiraGeral };
+                }
+                setEscolhidos(inicial);
+                setAvisoIA('');
               }}
               className={`min-h-touch rounded-card border-2 px-3 py-3 text-left text-sm font-medium transition ${
                 segmento === s.key
@@ -248,15 +303,66 @@ export default function CommercialEstimateForm({
           ))}
         </div>
         {segmento && (
-          <p className="mt-3 text-sm text-brand-800">
-            {doSegmento.length} itens disponíveis para este tipo de lugar. Marque o que entra no
-            serviço.
+          <p className="mt-3 rounded-card bg-brand-50 p-3 text-sm text-brand-900">
+            ✅ <strong>{doSegmento.length} itens</strong> já foram marcados — é o que costuma
+            existir num lugar desse tipo. Desmarque o que não se aplica e ajuste as quantidades.
           </p>
         )}
       </div>
 
       {segmento && (
         <>
+          {/* Ferramentas de apoio */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="card">
+              <p className="text-xl font-semibold text-brand-900">📐 Medir a área</p>
+              <p className="mb-3 text-brand-800">
+                Meça cada ambiente e o sistema soma. Os itens cobrados por metragem usam esse
+                número — orçamento mais justo.
+              </p>
+              <button
+                className="btn-primary w-full"
+                type="button"
+                onClick={() => setCalculadoraAberta(true)}
+              >
+                {areaSqft
+                  ? `📐 ${Number(areaSqft).toLocaleString('pt-BR')} sq ft — refazer medição`
+                  : '📐 Abrir a calculadora de área'}
+              </button>
+              {comodos.filter((c) => c.comprimento && c.largura).length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {comodos
+                    .filter((c) => c.comprimento && c.largura)
+                    .map((c) => (
+                      <p key={c.id} className="text-sm text-brand-800">
+                        {c.nome || 'Ambiente'} — {Math.round(c.comprimento * c.largura)} sq ft
+                      </p>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <PhotoAnalyzer
+              segment={segmento}
+              catalogo={doSegmento.map((c) => ({
+                id: c.id,
+                area: c.area,
+                item: c.item,
+                unit: c.unit,
+              }))}
+              aoAplicar={aplicarAnalise}
+            />
+          </div>
+
+          {avisoIA && (
+            <div className="card border-2 border-aqua-500">
+              <p className="font-medium text-brand-900">🤖 {avisoIA}</p>
+              <p className="mt-1 text-sm text-brand-800">
+                Confira os itens abaixo antes de fechar o preço.
+              </p>
+            </div>
+          )}
+
           {/* 2. Condições gerais */}
           <div className="card">
             <p className="mb-3 text-xl font-semibold text-brand-900">2. Como é o serviço</p>
