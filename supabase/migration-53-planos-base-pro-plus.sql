@@ -15,7 +15,8 @@
 -- ate no plano de entrada. A diferenca entre os planos e recurso,
 -- equipe e acesso — nao tamanho de carteira.
 --
--- Equipe adicional: US$ 19,99/mes em qualquer plano.
+-- Equipe adicional: US$ 19,99/mes em qualquer plano, com teto de
+-- mensalidade: Base para em US$ 100, Pro em US$ 150, Plus sem teto.
 --
 -- Os mesmos numeros estao em src/lib/plans.ts (para a tela). Mudou
 -- aqui -> mudar la. Quem manda de verdade e este arquivo: as travas
@@ -95,11 +96,25 @@ returns int language sql stable security definer set search_path = public as $$
     from public.companies where id = p_company;
 $$;
 
+-- Mensalidade com TETO por plano:
+--   Base  para em US$ 100
+--   Pro   para em US$ 150
+--   Plus  sem teto — quem cresce muito esta aqui, e ai o crescimento
+--         vira receita. Sem teto no Base, o plano de entrada passaria
+--         do teto do Pro, o que nao faria sentido.
 create or replace function public.company_monthly_fee(p_company uuid)
 returns numeric language sql stable security definer set search_path = public as $$
-  select ((case plan when 'plus' then 90 when 'pro' then 60 else 30 end)
-          + coalesce(extra_teams, 0) * 19.99)::numeric
-    from public.companies where id = p_company;
+  select case c.plan
+           when 'plus' then v.bruto
+           when 'pro'  then least(v.bruto, 150::numeric)
+           else             least(v.bruto, 100::numeric)
+         end
+    from public.companies c
+    cross join lateral (
+      select ((case c.plan when 'plus' then 90 when 'pro' then 60 else 30 end)
+              + coalesce(c.extra_teams, 0) * 19.99)::numeric as bruto
+    ) v
+   where c.id = p_company;
 $$;
 
 -- -------------------------------------------------------------

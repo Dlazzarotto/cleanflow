@@ -4,7 +4,7 @@ import { updateMyNameAction, saveLocaleAction, updateCompanyAction } from '@/lib
 import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
-import { planName, maxTeams, monthlyFee, maxClients, maxUsers, hasReports, hasCommercial, limitLabel } from '@/lib/plans';
+import { planName, maxTeams, monthlyFee, maxClients, maxUsers, hasReports, hasCommercial, limitLabel, feeCap, atFeeCap, EXTRA_TEAM_PRICE } from '@/lib/plans';
 import { DOC_LANGS } from '@/lib/i18n/documents';
 import EmailDiagnostic from '@/components/EmailDiagnostic';
 import ReminderPanel from '@/components/ReminderPanel';
@@ -137,6 +137,14 @@ export default async function ConfiguracoesPage() {
           <p className="text-brand-800">
             {hasReports((company as any).plan) ? '✓' : '—'} Relatórios gerenciais ·{' '}
             {hasCommercial((company as any).plan) ? '✓' : '—'} Limpeza comercial
+          </p>
+          <p className="text-brand-800">
+            Equipe adicional US$ {EXTRA_TEAM_PRICE}/mês ·{' '}
+            {feeCap((company as any).plan) === null
+              ? 'sem teto de mensalidade'
+              : atFeeCap((company as any).plan, (company as any).extra_teams ?? 0)
+                ? `você já está no teto de US$ ${feeCap((company as any).plan)}/mês — equipes a mais não aumentam a conta`
+                : `sua conta não passa de US$ ${feeCap((company as any).plan)}/mês`}
           </p>
           {(company as any).next_due_date && (
             <p className="text-brand-800">

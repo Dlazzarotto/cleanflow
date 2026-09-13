@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { PLANS, monthlyFee, maxTeams, EXTRA_TEAM_PRICE, type PlanKey } from '@/lib/plans';
+import { PLANS, monthlyFee, maxTeams, feeCap, atFeeCap, EXTRA_TEAM_PRICE, type PlanKey } from '@/lib/plans';
 import { DOC_LANGS } from '@/lib/i18n/documents';
 
 export default function NovaEmpresaPage() {
@@ -101,6 +101,16 @@ export default function NovaEmpresaPage() {
           <p className="text-sm text-brand-100">
             até {maxTeams(plan, extraTeams)} equipe(s) ativas
           </p>
+          {feeCap(plan) !== null && (
+            <p className="mt-1 text-sm text-brand-100">
+              {atFeeCap(plan, extraTeams)
+                ? `No teto do plano — equipes a mais não aumentam a conta.`
+                : `Teto deste plano: US$ ${feeCap(plan)}/mês.`}
+            </p>
+          )}
+          {feeCap(plan) === null && (
+            <p className="mt-1 text-sm text-brand-100">Sem teto de mensalidade.</p>
+          )}
         </div>
       </div>
 

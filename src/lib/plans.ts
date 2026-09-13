@@ -18,6 +18,7 @@ export interface Plan {
   price: number;            // mensalidade base em USD
   baseTeams: number;        // equipes incluidas
   extraTeamPrice: number;   // preco por equipe adicional
+  feeCap: number | null;    // teto da mensalidade; null = sem teto
   maxClients: number | null; // clientes ativos; null = sem limite (hoje: todos)
   reports: boolean;          // libera a tela de Relatorios
   commercial: boolean;       // libera o modo comercial
@@ -33,6 +34,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     price: 30,
     baseTeams: 1,
     extraTeamPrice: EXTRA_TEAM_PRICE,
+    feeCap: 100,
     maxClients: null,
     reports: false,
     commercial: false,
@@ -44,6 +46,7 @@ export const PLANS: Record<PlanKey, Plan> = {
       'Estimates com checklist e contrato',
       'Faturas e recibos',
       'App da equipe com check-in por GPS',
+      'Equipe extra US$ 19,99 — sua conta nunca passa de US$ 100',
     ],
   },
   pro: {
@@ -52,6 +55,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     price: 60,
     baseTeams: 2,
     extraTeamPrice: EXTRA_TEAM_PRICE,
+    feeCap: 150,
     maxClients: null,
     reports: true,
     commercial: false,
@@ -63,6 +67,7 @@ export const PLANS: Record<PlanKey, Plan> = {
       'Mapa em tempo real das equipes',
       'Sugestão de rota e encaixe por distância',
       'Time de marketing com acesso próprio',
+      'Equipe extra US$ 19,99 — sua conta nunca passa de US$ 150',
     ],
   },
   plus: {
@@ -71,6 +76,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     price: 90,
     baseTeams: 3,
     extraTeamPrice: EXTRA_TEAM_PRICE,
+    feeCap: null,
     maxClients: null,
     reports: true,
     commercial: true,
@@ -82,6 +88,7 @@ export const PLANS: Record<PlanKey, Plan> = {
       'Catálogo de áreas por segmento',
       'Contrato mensal fixo e prazos net 15/30/45',
       'Propostas comerciais por item, área e grau de sujeira',
+      'Equipe extra US$ 19,99, sem teto — cresça à vontade',
     ],
   },
 };
@@ -108,9 +115,28 @@ export function maxTeams(p: string, extraTeams = 0): number {
   return plan(p).baseTeams + Math.max(0, extraTeams);
 }
 
+/**
+ * Mensalidade com o teto do plano aplicado.
+ * Base para em US$ 100, Pro em US$ 150 e o Plus nao tem teto — quem cresce
+ * muito esta no Plus, e ali o crescimento vira receita. Sem teto no Base o
+ * plano de entrada passaria do teto do Pro, o que nao faz sentido nenhum.
+ */
 export function monthlyFee(p: string, extraTeams = 0): number {
   const t = plan(p);
-  return t.price + Math.max(0, extraTeams) * t.extraTeamPrice;
+  const bruto = t.price + Math.max(0, extraTeams) * t.extraTeamPrice;
+  return t.feeCap === null ? bruto : Math.min(bruto, t.feeCap);
+}
+
+/** Teto da mensalidade; null = sem teto. */
+export function feeCap(p: string): number | null {
+  return plan(p).feeCap;
+}
+
+/** A empresa ja bateu no teto do plano? */
+export function atFeeCap(p: string, extraTeams = 0): boolean {
+  const t = plan(p);
+  if (t.feeCap === null) return false;
+  return t.price + Math.max(0, extraTeams) * t.extraTeamPrice >= t.feeCap;
 }
 
 export function planName(p: string): string {

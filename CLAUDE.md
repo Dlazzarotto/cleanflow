@@ -46,7 +46,7 @@ Dois campos diferentes, não confundir:
 - **Pro** $60 · só residencial · 2 equipes · relatórios
 - **Plus** $90 · residencial + comercial · 3 equipes
 - **Acesso = 1 (dona) + 1 por equipe** (migration-54), não um login por faxineira. Cada equipe tem um login compartilhado; trocar gente na turma é mexer no cadastro, não criar acesso. Quem sai fica em hold (`memberships.active = false`) e volta sem perder histórico. Base 2 · Pro 3 · Plus 4, e equipe extra soma mais um.
-- Equipe adicional: $19,99/mês em qualquer plano.
+- Equipe adicional: $19,99/mês em qualquer plano, **com teto de mensalidade**: Base para em $100, Pro em $150, **Plus sem teto**. `monthlyFee()` e `company_monthly_fee()` aplicam. O Plus não tem teto de propósito — quem cresce muito está lá, e ali crescimento vira receita.
 - **As travas rodam no banco, não na tela**: `company_max_teams/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `memberships_plan_limit`, `teams_plan_limit`.
 - Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.
 - **Cliente é ilimitado em todos os planos.** Limitar carteira pune quem cresce, e o concorrente direto (MaidPad) vende "Unlimited Clients" até no plano de entrada. A diferença entre planos é recurso, equipe e acesso. `company_max_clients()` segue existindo devolvendo `null` — se um dia voltar teto, muda ali e em `plans.ts`.
