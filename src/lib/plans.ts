@@ -19,7 +19,6 @@ export interface Plan {
   baseTeams: number;        // equipes incluidas
   extraTeamPrice: number;   // preco por equipe adicional
   maxClients: number | null; // clientes ativos; null = sem limite
-  maxUsers: number | null;   // acessos ativos; null = sem limite
   reports: boolean;          // libera a tela de Relatorios
   commercial: boolean;       // libera o modo comercial
   highlights: string[];
@@ -35,13 +34,12 @@ export const PLANS: Record<PlanKey, Plan> = {
     baseTeams: 1,
     extraTeamPrice: EXTRA_TEAM_PRICE,
     maxClients: 50,
-    maxUsers: 2,
     reports: false,
     commercial: false,
     highlights: [
       'Limpeza residencial',
       'Até 50 clientes ativos',
-      '2 acessos · 1 equipe',
+      '1 equipe · 2 acessos (a dona + a equipe)',
       'Clientes, agenda e calendário',
       'Estimates com checklist e contrato',
       'App da equipe com check-in por GPS',
@@ -54,13 +52,12 @@ export const PLANS: Record<PlanKey, Plan> = {
     baseTeams: 2,
     extraTeamPrice: EXTRA_TEAM_PRICE,
     maxClients: 200,
-    maxUsers: 6,
     reports: true,
     commercial: false,
     highlights: [
       'Tudo do Base',
       'Até 200 clientes ativos',
-      '6 acessos · 2 equipes',
+      '2 equipes · 3 acessos (a dona + uma por equipe)',
       'Relatórios gerenciais',
       'Mapa em tempo real das equipes',
       'Sugestão de rota e encaixe por distância',
@@ -74,13 +71,12 @@ export const PLANS: Record<PlanKey, Plan> = {
     baseTeams: 3,
     extraTeamPrice: EXTRA_TEAM_PRICE,
     maxClients: null,
-    maxUsers: 6,
     reports: true,
     commercial: true,
     highlights: [
       'Tudo do Pro',
       'Limpeza comercial: escritórios, restaurantes, lojas, clínicas',
-      'Clientes ilimitados · 6 acessos · 3 equipes',
+      'Clientes ilimitados · 3 equipes · 4 acessos',
       'Catálogo de áreas por segmento',
       'Contrato mensal fixo e prazos net 15/30/45',
       'Propostas comerciais por item, área e grau de sujeira',
@@ -124,9 +120,14 @@ export function maxClients(p: string): number | null {
   return plan(p).maxClients;
 }
 
-/** Limite de acessos ativos; null = sem limite. */
-export function maxUsers(p: string): number | null {
-  return plan(p).maxUsers;
+/**
+ * Limite de acessos: 1 da dona + 1 por equipe.
+ * Cada equipe tem um login so, compartilhado pela turma — nao e um login
+ * por faxineira. Quem entra e sai da equipe e trocado no cadastro, e o
+ * acesso segue sendo da equipe. Equipe adicional soma um acesso.
+ */
+export function maxUsers(p: string, extraTeams = 0): number {
+  return 1 + maxTeams(p, extraTeams);
 }
 
 /** O plano libera a tela de Relatorios? */

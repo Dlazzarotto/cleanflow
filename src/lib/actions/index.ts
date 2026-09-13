@@ -495,6 +495,37 @@ export async function deletePositionAction(id: string) {
   revalidatePath('/equipes');
 }
 
+/**
+ * Excecao de permissao por pessoa.
+ * O cargo define o padrao; aqui a dona destrava ou trava algo pontual em
+ * uma pessoa so. Guardamos apenas as chaves mexidas — quem fica em
+ * "Cargo" sai do override, para que mudar a regra do cargo continue
+ * valendo para essa pessoa.
+ */
+export async function setMemberPermissionOverrideAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const membershipId = String(formData.get('membership_id'));
+
+  const override: Record<string, boolean> = {};
+  for (const { key } of PERMISSION_KEYS) {
+    const escolha = String(formData.get(`ovr_${key}`) ?? 'cargo');
+    if (escolha === 'sim') override[key] = true;
+    if (escolha === 'nao') override[key] = false;
+  }
+
+  const { data: linhas, error } = await supabase
+    .from('memberships')
+    .update({ permissions_override: override })
+    .eq('id', membershipId)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!linhas?.length) {
+    throw new Error('Não foi possível salvar a exceção: apenas a gestão pode alterar.');
+  }
+  revalidatePath('/equipes');
+  revalidatePath('/minha-agenda');
+}
+
 export async function setMemberPositionAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const membershipId = String(formData.get('membership_id'));

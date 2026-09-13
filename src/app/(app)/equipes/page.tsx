@@ -10,6 +10,7 @@ import {
   updatePositionAction,
   deletePositionAction,
   setMemberPositionAction,
+  setMemberPermissionOverrideAction,
 } from '@/lib/actions';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import InviteForm from '@/components/InviteForm';
@@ -37,7 +38,7 @@ export default async function EquipesPage() {
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
-      .select('id, user_id, full_name, role, active, position_id, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
+      .select('id, user_id, full_name, role, active, position_id, permissions_override, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
       .eq('company_id', companyId)
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
@@ -192,6 +193,42 @@ export default async function EquipesPage() {
                 <div className="mt-2">
                   <ResetAccessButton membershipId={m.id} personName={m.full_name} />
                 </div>
+                {m.role === 'cleaner' && (
+                  <details className="mt-2">
+                    <summary className="min-h-touch cursor-pointer py-2 font-medium text-brand-700">
+                      Exceção só para {(m.full_name ?? '').split(' ')[0]}
+                    </summary>
+                    <form action={setMemberPermissionOverrideAction} className="mt-2 space-y-2">
+                      <input type="hidden" name="membership_id" value={m.id} />
+                      <p className="text-sm text-brand-800">
+                        O cargo já decide o padrão. Mexa aqui só no que for diferente para
+                        esta pessoa — o que ficar em &ldquo;Cargo&rdquo; continua seguindo o cargo,
+                        inclusive se você mudar a regra do cargo depois.
+                      </p>
+                      {PERMISSION_KEYS.map((k) => (
+                        <div key={k.key} className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-brand-900">{k.label}</span>
+                          <select
+                            className="input !w-40"
+                            name={`ovr_${k.key}`}
+                            defaultValue={
+                              m.permissions_override?.[k.key] === true
+                                ? 'sim'
+                                : m.permissions_override?.[k.key] === false
+                                  ? 'nao'
+                                  : 'cargo'
+                            }
+                          >
+                            <option value="cargo">Segue o cargo</option>
+                            <option value="sim">Liberado</option>
+                            <option value="nao">Bloqueado</option>
+                          </select>
+                        </div>
+                      ))}
+                      <button className="btn-ghost" type="submit">Salvar exceção</button>
+                    </form>
+                  </details>
+                )}
               </div>
                     ))}
                   </div>
