@@ -42,14 +42,14 @@ Dois campos diferentes, não confundir:
 - Comercial é o que define o plano **Plus** (migration-53). `has_commercial()` = `plan = 'plus' or commercial_enabled`; trava no banco impede cliente comercial sem isso. `commercial_enabled` deixou de ser assinatura à parte e virou só exceção manual (liberar comercial para quem está no Base/Pro).
 
 ### Planos (migration-53)
-- **Base** $30 · só residencial · 50 clientes ativos · 1 equipe
-- **Pro** $60 · só residencial · 200 clientes · 2 equipes · relatórios
-- **Plus** $90 · residencial + comercial · clientes ilimitados · 3 equipes
+- **Base** $30 · só residencial · 1 equipe
+- **Pro** $60 · só residencial · 2 equipes · relatórios
+- **Plus** $90 · residencial + comercial · 3 equipes
 - **Acesso = 1 (dona) + 1 por equipe** (migration-54), não um login por faxineira. Cada equipe tem um login compartilhado; trocar gente na turma é mexer no cadastro, não criar acesso. Quem sai fica em hold (`memberships.active = false`) e volta sem perder histórico. Base 2 · Pro 3 · Plus 4, e equipe extra soma mais um.
 - Equipe adicional: $19,99/mês em qualquer plano.
-- **As travas rodam no banco, não na tela**: `company_max_teams/clients/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `clients_plan_limit`, `memberships_plan_limit`, `teams_plan_limit`.
+- **As travas rodam no banco, não na tela**: `company_max_teams/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `memberships_plan_limit`, `teams_plan_limit`.
 - Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.
-- Clientes com status `lead`/`inativo`/`perdido`/`deletado` não ocupam vaga — só `ativo` e `em_espera`.
+- **Cliente é ilimitado em todos os planos.** Limitar carteira pune quem cresce, e o concorrente direto (MaidPad) vende "Unlimited Clients" até no plano de entrada. A diferença entre planos é recurso, equipe e acesso. `company_max_clients()` segue existindo devolvendo `null` — se um dia voltar teto, muda ali e em `plans.ts`.
 - **Permissão é por pessoa, não por cargo** (migration-56): mora em `memberships.permissions`, com as 5 caixinhas de `src/lib/permissions.ts` (door_code, alarm, preferences, notes, checkin). Chave ausente = liberado (regra 6). `positions`/`position_id`/`permissions_override` viraram legado — a 56 copiou o que valia para `memberships.permissions` e ninguém mais lê; apagar é decisão do David (SQL comentado no fim da 56).
 - Nomes antigos: `standard` → Base, `plus` antigo → Pro. O nome `plus` colide, então migration-53 e deploy andam juntos.
 

@@ -6,10 +6,14 @@
 -- modulo comercial (migration-47), que era vendido a parte, no que
 -- define o plano Plus.
 --
---   Base  US$ 30  - so residencial - 50 clientes,  2 acessos, 1 equipe
---   Pro   US$ 60  - so residencial - 200 clientes, 6 acessos, 2 equipes
---   Plus  US$ 90  - residencial + comercial - clientes sem limite,
---                                            6 acessos, 3 equipes
+--   Base  US$ 30  - so residencial              - 1 equipe
+--   Pro   US$ 60  - so residencial + relatorios  - 2 equipes
+--   Plus  US$ 90  - residencial + comercial      - 3 equipes
+--
+-- CLIENTE E ILIMITADO EM TODOS OS PLANOS. Limitar cliente pune quem
+-- cresce, e o concorrente direto (MaidPad) vende "Unlimited Clients"
+-- ate no plano de entrada. A diferenca entre os planos e recurso,
+-- equipe e acesso — nao tamanho de carteira.
 --
 -- Equipe adicional: US$ 19,99/mes em qualquer plano.
 --
@@ -73,15 +77,11 @@ returns int language sql stable security definer set search_path = public as $$
     from public.companies where id = p_company;
 $$;
 
--- null = sem limite
+-- Mantida devolvendo null (= sem limite) para nao quebrar nada que a
+-- chame. Se um dia voltar a existir teto de cliente, e aqui que muda.
 create or replace function public.company_max_clients(p_company uuid)
 returns int language sql stable security definer set search_path = public as $$
-  select case plan
-           when 'plus' then null::int
-           when 'pro'  then 200
-           else 50
-         end
-    from public.companies where id = p_company;
+  select null::int from public.companies where id = p_company;
 $$;
 
 -- Plus tambem tem teto de acesso: 6.
@@ -131,53 +131,15 @@ $func$;
 grant execute on function public.has_reports() to authenticated;
 
 -- -------------------------------------------------------------
--- 4) Trava de clientes ativos
+-- 4) Cliente nao tem teto
 --
--- Conta so quem esta 'ativo' ou 'em_espera' — lead, inativo, perdido e
--- deletado nao ocupam vaga, senao o plano puniria quem prospecta.
--- Dispara so quando a linha entra (ou passa a ser) um cliente que conta,
--- entao nada trava a equipe de campo no meio do trabalho.
+-- Nao existe trava de quantidade de cliente. Estes drops estao aqui
+-- para o caso de uma versao anterior deste arquivo ja ter criado os
+-- triggers no seu banco — assim reexecutar limpa o que ficou.
 -- -------------------------------------------------------------
-create or replace function public.check_client_limit()
-returns trigger language plpgsql security definer set search_path = public as $func$
-declare
-  v_max int;
-  v_atual int;
-begin
-  select public.company_max_clients(new.company_id) into v_max;
-  if v_max is null then
-    return new;
-  end if;
-
-  select count(*) into v_atual
-    from public.clients
-   where company_id = new.company_id
-     and status in ('ativo','em_espera')
-     and id is distinct from new.id;
-
-  if v_atual >= v_max then
-    raise exception
-      'Seu plano permite % cliente(s) ativo(s). Faça upgrade para cadastrar mais.', v_max;
-  end if;
-  return new;
-end;
-$func$;
-
 drop trigger if exists clients_plan_limit on public.clients;
-create trigger clients_plan_limit
-  before insert on public.clients
-  for each row
-  when (new.status in ('ativo','em_espera'))
-  execute function public.check_client_limit();
-
 drop trigger if exists clients_plan_limit_update on public.clients;
-create trigger clients_plan_limit_update
-  before update on public.clients
-  for each row
-  when (new.status in ('ativo','em_espera')
-        and old.status is distinct from new.status
-        and old.status not in ('ativo','em_espera'))
-  execute function public.check_client_limit();
+drop function if exists public.check_client_limit();
 
 -- -------------------------------------------------------------
 -- 5) Trava de acessos
@@ -234,9 +196,6 @@ create trigger memberships_plan_limit_update
 -- funcionando). Serve para voce decidir quem precisa subir de plano:
 --
 -- select c.name, c.plan,
---        (select count(*) from public.clients cl
---          where cl.company_id = c.id and cl.status in ('ativo','em_espera')) as clientes,
---        public.company_max_clients(c.id) as limite_clientes,
 --        (select count(*) from public.memberships m
 --          where m.company_id = c.id and m.active) as acessos,
 --        public.company_max_users(c.id) as limite_acessos
