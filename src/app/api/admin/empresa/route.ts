@@ -73,15 +73,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Falha ao criar empresa: ${companyError?.message}` }, { status: 502 });
   }
 
-  // 1b) Cargos padrao da empresa (mesmos da migration-54).
-  // Valor/fatura/pagamento nao entram aqui — isso e decidido por RLS.
-  await admin.from('positions').insert([
-    { company_id: company.id, name: 'Motorista',  permissions: { door_code: true,  alarm: true,  preferences: false, notes: true,  checkin: true } },
-    { company_id: company.id, name: 'Helper',     permissions: { door_code: false, alarm: false, preferences: true,  notes: true,  checkin: true } },
-    { company_id: company.id, name: 'Supervisor', permissions: { door_code: true,  alarm: true,  preferences: true,  notes: true,  checkin: true } },
-    { company_id: company.id, name: 'Outro',      permissions: { door_code: false, alarm: false, preferences: false, notes: false, checkin: true } },
-  ]);
-
   // 2) Usuario do responsavel (reaproveita se ja existir)
   let userId: string | null = null;
   for (let page = 1; page <= 5 && !userId; page++) {

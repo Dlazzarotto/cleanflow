@@ -20,6 +20,7 @@ export interface Plan {
   extraTeamPrice: number;   // preco por equipe adicional
   feeCap: number | null;    // teto da mensalidade; null = sem teto
   maxClients: number | null; // clientes ativos; null = sem limite (hoje: todos)
+  maxUsers: number | null;   // acessos ativos;  null = sem limite (hoje: todos)
   reports: boolean;          // libera a tela de Relatorios
   commercial: boolean;       // libera o modo comercial
   highlights: string[];
@@ -36,12 +37,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     extraTeamPrice: EXTRA_TEAM_PRICE,
     feeCap: 100,
     maxClients: null,
+    maxUsers: null,
     reports: false,
     commercial: false,
     highlights: [
       'Clientes ilimitados',
       'Limpeza residencial',
-      '1 equipe · 2 acessos (a dona + a equipe)',
+      'Acessos ilimitados · 1 equipe',
       'Clientes, agenda e calendário',
       'Estimates com checklist e contrato',
       'Faturas e recibos',
@@ -57,12 +59,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     extraTeamPrice: EXTRA_TEAM_PRICE,
     feeCap: 150,
     maxClients: null,
+    maxUsers: null,
     reports: true,
     commercial: false,
     highlights: [
       'Tudo do Base',
       'Clientes ilimitados',
-      '2 equipes · 3 acessos (a dona + uma por equipe)',
+      'Acessos ilimitados · 2 equipes',
       'Relatórios gerenciais',
       'Mapa em tempo real das equipes',
       'Sugestão de rota e encaixe por distância',
@@ -78,12 +81,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     extraTeamPrice: EXTRA_TEAM_PRICE,
     feeCap: null,
     maxClients: null,
+    maxUsers: null,
     reports: true,
     commercial: true,
     highlights: [
       'Tudo do Pro',
       'Limpeza comercial: escritórios, restaurantes, lojas, clínicas',
-      'Clientes ilimitados · 3 equipes · 4 acessos',
+      'Clientes e acessos ilimitados · 3 equipes',
       'Rentabilidade por contrato',
       'Catálogo de áreas por segmento',
       'Contrato mensal fixo e prazos net 15/30/45',
@@ -155,13 +159,15 @@ export function maxClients(p: string): number | null {
 }
 
 /**
- * Limite de acessos: 1 da dona + 1 por equipe.
- * Cada equipe tem um login so, compartilhado pela turma — nao e um login
- * por faxineira. Quem entra e sai da equipe e trocado no cadastro, e o
- * acesso segue sendo da equipe. Equipe adicional soma um acesso.
+ * Limite de acessos ativos; null = sem limite.
+ * Hoje TODOS os planos sao ilimitados. A empresa decide como usar: uma
+ * conta compartilhada por equipe, ou um login por pessoa — e um login a
+ * mais nao custa nada para a plataforma, diferente de SMS. Com login por
+ * pessoa a jornada em work_shifts volta a ter nome, o que se perdia na
+ * conta compartilhada.
  */
-export function maxUsers(p: string, extraTeams = 0): number {
-  return 1 + maxTeams(p, extraTeams);
+export function maxUsers(p: string): number | null {
+  return plan(p).maxUsers;
 }
 
 /** O plano libera a tela de Relatorios? */

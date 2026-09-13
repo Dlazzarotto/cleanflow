@@ -4,10 +4,9 @@
 -- Executar no SQL Editor do Supabase (depois da 55).
 --
 -- 1) PERMISSAO E POR PESSOA, NAO POR CARGO
---    A migration-11 guardava as permissoes em positions (cargo) e a
---    migration-54 somou uma excecao por pessoa por cima. Viraram duas
---    listas para a mesma coisa, e os nomes dos cargos ainda colidiam
---    com os papeis da migration-55 (motorista, helper, supervisor).
+--    A migration-11 guardava as permissoes em positions (cargo). Os
+--    nomes dos cargos colidiam com os papeis da migration-55
+--    (motorista, helper, supervisor) — duas listas para a mesma coisa.
 --    Agora a permissao mora direto no vinculo da pessoa.
 --
 --    Nada e perdido: o que cada pessoa enxergava hoje (cargo + excecao)
@@ -30,30 +29,57 @@ alter table public.memberships
 comment on column public.memberships.permissions is
   'O que esta pessoa enxerga no app (chaves de src/lib/permissions.ts). Chave ausente = liberado, para que configuracao nunca impeca alguem de trabalhar.';
 
--- Copia o que valia ate agora: cargo por baixo, excecao por cima.
--- Guardado por si mesmo — so roda em quem ainda esta com permissions
--- vazio, entao reexecutar o arquivo nao desfaz ajuste feito depois.
+-- Copia o que cada pessoa ja enxergava, ANTES de a leitura mudar.
+--
+-- A origem depende do que existe no seu banco:
+--   positions + memberships.position_id  vem da migration-11 (real)
+--   memberships.permissions_override     so existe se voce rodou uma
+--                                        versao antiga da migration-54,
+--                                        que hoje esta vazia
+-- Por isso cada parte e conferida antes de rodar. So mexe em quem esta
+-- com permissions vazio, entao reexecutar nao desfaz ajuste posterior.
 do $$
+declare
+  v_tem_cargo boolean;
+  v_tem_excecao boolean;
 begin
-  if exists (
+  select exists(
     select 1 from information_schema.columns
-     where table_schema = 'public'
-       and table_name = 'memberships'
+     where table_schema = 'public' and table_name = 'memberships'
        and column_name = 'position_id'
-  ) then
-    update public.memberships m
-       set permissions = coalesce(p.permissions, '{}'::jsonb)
-                      || coalesce(m.permissions_override, '{}'::jsonb)
-      from public.positions p
-     where p.id = m.position_id
-       and m.permissions = '{}'::jsonb;
+  ) and to_regclass('public.positions') is not null
+    into v_tem_cargo;
 
-    -- Quem nao tinha cargo mas tinha excecao.
-    update public.memberships m
-       set permissions = coalesce(m.permissions_override, '{}'::jsonb)
-     where m.position_id is null
-       and m.permissions = '{}'::jsonb
-       and coalesce(m.permissions_override, '{}'::jsonb) <> '{}'::jsonb;
+  select exists(
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'memberships'
+       and column_name = 'permissions_override'
+  ) into v_tem_excecao;
+
+  if v_tem_cargo and v_tem_excecao then
+    execute $q$
+      update public.memberships m
+         set permissions = coalesce(p.permissions, '{}'::jsonb)
+                        || coalesce(m.permissions_override, '{}'::jsonb)
+        from public.positions p
+       where p.id = m.position_id and m.permissions = '{}'::jsonb
+    $q$;
+  elsif v_tem_cargo then
+    execute $q$
+      update public.memberships m
+         set permissions = coalesce(p.permissions, '{}'::jsonb)
+        from public.positions p
+       where p.id = m.position_id and m.permissions = '{}'::jsonb
+    $q$;
+  end if;
+
+  if v_tem_excecao then
+    execute $q$
+      update public.memberships m
+         set permissions = coalesce(m.permissions_override, '{}'::jsonb)
+       where m.permissions = '{}'::jsonb
+         and coalesce(m.permissions_override, '{}'::jsonb) <> '{}'::jsonb
+    $q$;
   end if;
 end $$;
 

@@ -45,12 +45,13 @@ Dois campos diferentes, não confundir:
 - **Base** $30 · só residencial · 1 equipe
 - **Pro** $60 · só residencial · 2 equipes · relatórios
 - **Plus** $90 · residencial + comercial · 3 equipes
-- **Acesso = 1 (dona) + 1 por equipe** (migration-54), não um login por faxineira. Cada equipe tem um login compartilhado; trocar gente na turma é mexer no cadastro, não criar acesso. Quem sai fica em hold (`memberships.active = false`) e volta sem perder histórico. Base 2 · Pro 3 · Plus 4, e equipe extra soma mais um.
+- **Acesso é ilimitado nos três planos.** Um login a mais não custa nada à plataforma (diferente de SMS), então a empresa decide: uma conta compartilhada por equipe, ou uma por pessoa. Com login por pessoa, `work_shifts` volta a ter nome na jornada. Quem sai fica em hold (`memberships.active = false`) e volta sem perder histórico.
 - Equipe adicional: $19,99/mês em qualquer plano, **com teto de mensalidade**: Base para em $100, Pro em $150, **Plus sem teto**. `monthlyFee()` e `company_monthly_fee()` aplicam. O Plus não tem teto de propósito — quem cresce muito está lá, e ali crescimento vira receita.
-- **As travas rodam no banco, não na tela**: `company_max_teams/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `memberships_plan_limit`, `teams_plan_limit`.
+- **As travas rodam no banco, não na tela**: `company_max_teams()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e o trigger `teams_plan_limit`.
 - Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.
-- **Cliente é ilimitado em todos os planos.** Limitar carteira pune quem cresce, e o concorrente direto (MaidPad) vende "Unlimited Clients" até no plano de entrada. A diferença entre planos é recurso, equipe e acesso. `company_max_clients()` segue existindo devolvendo `null` — se um dia voltar teto, muda ali e em `plans.ts`.
-- **Permissão é por pessoa, não por cargo** (migration-56): mora em `memberships.permissions`, com as 5 caixinhas de `src/lib/permissions.ts` (door_code, alarm, preferences, notes, checkin). Chave ausente = liberado (regra 6). `positions`/`position_id`/`permissions_override` viraram legado — a 56 copiou o que valia para `memberships.permissions` e ninguém mais lê; apagar é decisão do David (SQL comentado no fim da 56).
+- **Cliente e acesso são ilimitados nos três planos.** Limitar qualquer um dos dois pune quem cresce, e o concorrente direto vende "Unlimited Clients" e "Unlimited Users". **A única coisa com teto é equipe** — é o eixo que reflete tamanho de operação de verdade. `company_max_clients()` e `company_max_users()` seguem existindo devolvendo `null`; se um dia voltar teto, muda ali e em `plans.ts`.
+- **Permissão é por pessoa, não por cargo** (migration-56): mora em `memberships.permissions`, com as 5 caixinhas de `src/lib/permissions.ts` (door_code, alarm, preferences, notes, checkin). Chave ausente = liberado (regra 6). `positions`/`position_id` viraram legado — a 56 copia o que valia e ninguém mais lê; apagar é decisão do David (SQL comentado no fim da 56).
+- **A migration-54 está vazia de propósito.** As três coisas que ela fazia foram substituídas pela 53 (acesso ilimitado), 55 (papéis) e 56 (permissão por pessoa). O arquivo ficou só para não abrir buraco na numeração — pode pular.
 - Nomes antigos: `standard` → Base, `plus` antigo → Pro. O nome `plus` colide, então migration-53 e deploy andam juntos.
 
 ### Regras de negócio que já causaram incidentes

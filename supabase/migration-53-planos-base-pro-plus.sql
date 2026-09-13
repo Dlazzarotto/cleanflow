@@ -10,10 +10,12 @@
 --   Pro   US$ 60  - so residencial + relatorios  - 2 equipes
 --   Plus  US$ 90  - residencial + comercial      - 3 equipes
 --
--- CLIENTE E ILIMITADO EM TODOS OS PLANOS. Limitar cliente pune quem
--- cresce, e o concorrente direto (MaidPad) vende "Unlimited Clients"
--- ate no plano de entrada. A diferenca entre os planos e recurso,
--- equipe e acesso — nao tamanho de carteira.
+-- CLIENTE E ACESSO SAO ILIMITADOS NOS TRES. So equipe tem teto, porque
+-- e o unico eixo que reflete tamanho de operacao de verdade.
+--
+-- Limitar cliente ou acesso pune quem cresce, e o concorrente direto
+-- vende "Unlimited Clients" e "Unlimited Users". A diferenca entre os
+-- planos e RECURSO (relatorios, comercial) e EQUIPE.
 --
 -- Equipe adicional: US$ 19,99/mes em qualquer plano, com teto de
 -- mensalidade: Base para em US$ 100, Pro em US$ 150, Plus sem teto.
@@ -85,15 +87,13 @@ returns int language sql stable security definer set search_path = public as $$
   select null::int from public.companies where id = p_company;
 $$;
 
--- Plus tambem tem teto de acesso: 6.
+-- Acesso e ILIMITADO em todos os planos, igual cliente. Um login a mais
+-- nao custa nada para a plataforma (diferente de SMS), e a empresa decide
+-- se usa uma conta por equipe ou uma por pessoa. Mantida devolvendo null
+-- para nao quebrar quem a chame; se um dia voltar teto, muda aqui.
 create or replace function public.company_max_users(p_company uuid)
 returns int language sql stable security definer set search_path = public as $$
-  select case plan
-           when 'plus' then 6
-           when 'pro'  then 6
-           else 2
-         end
-    from public.companies where id = p_company;
+  select null::int from public.companies where id = p_company;
 $$;
 
 -- Mensalidade com TETO por plano:
@@ -157,49 +157,15 @@ drop trigger if exists clients_plan_limit_update on public.clients;
 drop function if exists public.check_client_limit();
 
 -- -------------------------------------------------------------
--- 5) Trava de acessos
+-- 5) Acesso nao tem teto
 --
--- Conta vinculos ativos da empresa. Reativar alguem que ja existe passa
--- pelo mesmo limite; sair e voltar nao burla.
+-- Assim como cliente, acesso e ilimitado. Estes drops estao aqui para o
+-- caso de uma versao anterior deste arquivo ja ter criado os triggers no
+-- seu banco — reexecutar limpa o que ficou.
 -- -------------------------------------------------------------
-create or replace function public.check_user_limit()
-returns trigger language plpgsql security definer set search_path = public as $func$
-declare
-  v_max int;
-  v_atual int;
-begin
-  select public.company_max_users(new.company_id) into v_max;
-  if v_max is null then
-    return new;
-  end if;
-
-  select count(*) into v_atual
-    from public.memberships
-   where company_id = new.company_id
-     and active
-     and id is distinct from new.id;
-
-  if v_atual >= v_max then
-    raise exception
-      'Seu plano permite % acesso(s). Faça upgrade para liberar mais pessoas.', v_max;
-  end if;
-  return new;
-end;
-$func$;
-
 drop trigger if exists memberships_plan_limit on public.memberships;
-create trigger memberships_plan_limit
-  before insert on public.memberships
-  for each row
-  when (new.active)
-  execute function public.check_user_limit();
-
 drop trigger if exists memberships_plan_limit_update on public.memberships;
-create trigger memberships_plan_limit_update
-  before update on public.memberships
-  for each row
-  when (new.active and not old.active)
-  execute function public.check_user_limit();
+drop function if exists public.check_user_limit();
 
 -- -------------------------------------------------------------
 -- 6) Conferencia — rode depois para ver como ficou

@@ -131,7 +131,7 @@ export default async function ConfiguracoesPage() {
           </p>
           <p className="text-brand-800">
             {limitLabel(maxClients((company as any).plan), 'cliente ativo', 'clientes ativos')} ·{' '}
-            {limitLabel(maxUsers((company as any).plan, (company as any).extra_teams ?? 0), 'acesso', 'acessos')} ·{' '}
+            {limitLabel(maxUsers((company as any).plan), 'acesso', 'acessos')} ·{' '}
             até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s)
           </p>
           <p className="text-brand-800">
