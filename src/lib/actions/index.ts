@@ -449,65 +449,34 @@ export async function updateMyBookingStatusAction(
 }
 
 
-// ---------- CARGOS ----------
-export async function createPositionAction(formData: FormData) {
-  const { supabase, companyId } = await getCompanyId();
-  const permissions: Record<string, boolean> = {};
-  for (const { key } of PERMISSION_KEYS) {
-    permissions[key] = formData.get(`perm_${key}`) === 'on';
-  }
-  const { error } = await supabase.from('positions').insert({
-    company_id: companyId,
-    name: String(formData.get('name') ?? '').trim(),
-    permissions,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath('/equipes');
-}
-
-export async function updatePositionAction(formData: FormData) {
+/**
+ * Permissoes desta pessoa (migration-56).
+ * Nao existe mais cargo: o que ela enxerga esta no vinculo dela.
+ * Chave ausente vale como liberado, entao gravamos as cinco sempre —
+ * assim o que a gestora desmarcou fica registrado como bloqueado.
+ */
+export async function setMemberPermissionsAction(formData: FormData) {
   const { supabase } = await getCompanyId();
-  const id = String(formData.get('id'));
+  const membershipId = String(formData.get('membership_id'));
+
   const permissions: Record<string, boolean> = {};
   for (const { key } of PERMISSION_KEYS) {
     permissions[key] = formData.get(`perm_${key}`) === 'on';
   }
-  const { data: linhasPositions14, error } = await supabase
-    .from('positions')
-    .update({
-      name: String(formData.get('name') ?? '').trim(),
-      permissions,
-    })
-    .eq('id', id)
+
+  const { data: linhas, error } = await supabase
+    .from('memberships')
+    .update({ permissions })
+    .eq('id', membershipId)
     .select('id');
   if (error) throw new Error(error.message);
-  if (!linhasPositions14 || linhasPositions14.length === 0) {
-    throw new Error(
-      'Não foi possível salvar o cargo: apenas a gestão pode alterar.'
-    );
+  if (!linhas?.length) {
+    throw new Error('Não foi possível salvar as permissões: apenas a gestão pode alterar.');
   }
   revalidatePath('/equipes');
+  revalidatePath('/minha-agenda');
 }
 
-export async function deletePositionAction(id: string) {
-  const { supabase } = await getCompanyId();
-  const { error } = await supabase.from('positions').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/equipes');
-}
-
-/**
- * Excecao de permissao por pessoa.
- * O cargo define o padrao; aqui a dona destrava ou trava algo pontual em
- * uma pessoa so. Guardamos apenas as chaves mexidas — quem fica em
- * "Cargo" sai do override, para que mudar a regra do cargo continue
- * valendo para essa pessoa.
- */
-/**
- * Liberar ou tirar a visao de valores de um manager/supervisor.
- * So o admin chega aqui — e o banco confere de novo no trigger
- * guard_membership_admin(), entao burlar a tela nao adianta.
- */
 export async function setMemberValuesAction(membershipId: string, liberar: boolean) {
   const { supabase, role } = await getAuth();
   if (!isAdmin(role)) {
@@ -547,24 +516,6 @@ export async function setMemberPermissionOverrideAction(formData: FormData) {
   }
   revalidatePath('/equipes');
   revalidatePath('/minha-agenda');
-}
-
-export async function setMemberPositionAction(formData: FormData) {
-  const { supabase } = await getCompanyId();
-  const membershipId = String(formData.get('membership_id'));
-  const positionId = String(formData.get('position_id') ?? '');
-  const { data: linhasMemberships15, error } = await supabase
-    .from('memberships')
-    .update({ position_id: positionId || null })
-    .eq('id', membershipId)
-    .select('id');
-  if (error) throw new Error(error.message);
-  if (!linhasMemberships15 || linhasMemberships15.length === 0) {
-    throw new Error(
-      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
-    );
-  }
-  revalidatePath('/equipes');
 }
 
 

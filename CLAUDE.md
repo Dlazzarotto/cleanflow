@@ -28,7 +28,9 @@ Dois campos diferentes, não confundir:
 - `memberships` liga usuário ↔ empresa com papel. **Lista única em `src/lib/roles.ts`** — nunca repetir os nomes em tela; o banco tem a mesma lista no check constraint e em `is_admin()`/`is_manager()`/`is_field()` (migration-55).
 - **Papéis**: `admin` (quem abre a empresa — acesso total, único que concede permissão) · `manager` (escritório: agenda e equipes) · `supervisor` (campo: cuida das equipes) · `motorista`/`helper`/`outros` (equipe) · `marketing` (**não é da equipe** — pessoa/empresa de fora que só cadastra lead e vê o que ela mesma cadastrou; escopo na migration-20).
 - Nomes antigos: `owner`→`admin`, `admin` velho→`manager`, `cleaner`→`helper`. `admin` é nome válido nos dois modelos, então a migration-55 é guardada pelo constraint.
-- **Valores não vêm do papel.** `can_see_values()` = admin sempre; manager/supervisor só se o admin ligar `memberships.can_see_values` (nasce desligada); equipe e marketing nunca. `guard_membership_admin()` impede que alguém se auto-libere. Preço no cadastro do cliente é mascarado pela view `clients_safe` e protegido na escrita por `guard_client_price()`.
+- **Valores não vêm do papel.** `can_see_values()` = admin sempre; manager/supervisor só se o admin ligar `memberships.can_see_values` (nasce desligada); equipe e marketing nunca. `guard_membership_admin()` impede auto-liberação.
+- **Preço**: a view `clients_safe` (migration-56) mascara `default_price` e `monthly_contract_value`; **toda leitura de cliente usa a view, escrita usa a tabela** (a view tem coluna calculada e não aceita insert/update). `guard_client_price()` barra a escrita sem permissão. Coluna de dinheiro nova em `clients` → acrescentar na lista da 56 e rodar de novo.
+- **A empresa nunca fica sem admin**: `guard_last_admin()` recusa rebaixar, desativar ou apagar o último admin ativo. Mais de um admin é permitido (sócios) e cada um ocupa uma vaga do plano.
 - **Escopo por equipe**: manager/supervisor veem as equipes em que estão (`team_members`); quem não tem nenhuma atribuída vê todas — é o caso do escritório. `sees_team()` decide.
 - `current_company_id()` e `is_manager()` no banco; RLS por `company_id` em tudo.
 - Equipe de campo (cleaner) **jamais** vê valores/pagamentos — isso está no banco (views e RLS), não só na tela.
@@ -48,7 +50,7 @@ Dois campos diferentes, não confundir:
 - **As travas rodam no banco, não na tela**: `company_max_teams/clients/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `clients_plan_limit`, `memberships_plan_limit`, `teams_plan_limit`.
 - Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.
 - Clientes com status `lead`/`inativo`/`perdido`/`deletado` não ocupam vaga — só `ativo` e `em_espera`.
-- **Cargos da equipe** (migration-54): Motorista, Helper, Supervisor, Outro — semeados por empresa em `positions`, com as 5 caixinhas de `src/lib/permissions.ts` (door_code, alarm, preferences, notes, checkin). O cargo é o padrão e `memberships.permissions_override` é a exceção por pessoa; `my_permissions()` mescla os dois (override vence chave a chave). Valor/fatura/pagamento **não são caixinha** — são RLS.
+- **Permissão é por pessoa, não por cargo** (migration-56): mora em `memberships.permissions`, com as 5 caixinhas de `src/lib/permissions.ts` (door_code, alarm, preferences, notes, checkin). Chave ausente = liberado (regra 6). `positions`/`position_id`/`permissions_override` viraram legado — a 56 copiou o que valia para `memberships.permissions` e ninguém mais lê; apagar é decisão do David (SQL comentado no fim da 56).
 - Nomes antigos: `standard` → Base, `plus` antigo → Pro. O nome `plus` colide, então migration-53 e deploy andam juntos.
 
 ### Regras de negócio que já causaram incidentes
@@ -93,6 +95,7 @@ Dois campos diferentes, não confundir:
 select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname='public' and proname in
  ('current_company_id','is_manager','is_admin','can_see_values','sees_team',
+  'my_permissions','guard_last_admin',
   'has_commercial','has_reports','current_mode',
   'company_max_clients','company_max_users','can_send_sms','sms_unread_count');
 ```

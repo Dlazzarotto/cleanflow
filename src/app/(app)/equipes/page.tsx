@@ -6,15 +6,11 @@ import {
   addTeamMemberAction,
   removeTeamMemberAction,
   setMembershipActiveAction,
-  createPositionAction,
-  updatePositionAction,
-  deletePositionAction,
-  setMemberPositionAction,
-  setMemberPermissionOverrideAction,
+  setMemberPermissionsAction,
   setMemberValuesAction,
 } from '@/lib/actions';
 import { PERMISSION_KEYS } from '@/lib/permissions';
-import { roleLabel, isField, isAdmin, valuesKeyApplies } from '@/lib/roles';
+import { roleLabel, isAdmin, isMarketing, valuesKeyApplies } from '@/lib/roles';
 import InviteForm from '@/components/InviteForm';
 import ResetAccessButton from '@/components/ResetAccessButton';
 import type { Team } from '@/lib/types';
@@ -29,22 +25,20 @@ export default async function EquipesPage() {
   const supabase = createClient();
   const { data: companyId } = await supabase.rpc('current_company_id');
 
-  const [{ data: teams }, { data: members }, { data: teamMembers }, { data: positions }, { data: companyRow }] = await Promise.all([
+  const [{ data: teams }, { data: members }, { data: teamMembers }, { data: companyRow }] = await Promise.all([
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
-      .select('id, user_id, full_name, role, active, position_id, permissions_override, can_see_values, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
+      .select('id, user_id, full_name, role, active, permissions, can_see_values, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
       .eq('company_id', companyId)
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
-    supabase.from('positions').select('*').order('name'),
     supabase.from('companies').select('plan, extra_teams').eq('id', companyId).single(),
   ]);
   const plan = planKey((companyRow as any)?.plan);
   const extras = (companyRow as any)?.extra_teams ?? 0;
   const limite = maxTeams(plan, extras);
-  const positionList = positions ?? [];
-
+  
   const teamList = (teams ?? []) as Team[];
   const memberList = members ?? [];
   const tm = teamMembers ?? [];
@@ -170,18 +164,6 @@ export default async function EquipesPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {isField(m.role) && (
-                    <form action={setMemberPositionAction} className="flex items-center gap-2">
-                      <input type="hidden" name="membership_id" value={m.id} />
-                      <select className="input !w-48" name="position_id" defaultValue={m.position_id ?? ''}>
-                        <option value="">Cargo padrão (tudo)</option>
-                        {positionList.map((p: any) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      <button className="btn-ghost" type="submit">Aplicar</button>
-                    </form>
-                  )}
                   {valuesKeyApplies(m.role) && souAdmin && (
                     <form action={setMemberValuesAction.bind(null, m.id, !m.can_see_values)}>
                       <button
@@ -203,39 +185,33 @@ export default async function EquipesPage() {
                 <div className="mt-2">
                   <ResetAccessButton membershipId={m.id} personName={m.full_name} />
                 </div>
-                {isField(m.role) && (
+                {!isMarketing(m.role) && (
                   <details className="mt-2">
                     <summary className="min-h-touch cursor-pointer py-2 font-medium text-brand-700">
-                      Exceção só para {(m.full_name ?? '').split(' ')[0]}
+                      O que {(m.full_name ?? '').split(' ')[0]} enxerga
                     </summary>
-                    <form action={setMemberPermissionOverrideAction} className="mt-2 space-y-2">
+                    <form action={setMemberPermissionsAction} className="mt-2 space-y-2">
                       <input type="hidden" name="membership_id" value={m.id} />
                       <p className="text-sm text-brand-800">
-                        O cargo já decide o padrão. Mexa aqui só no que for diferente para
-                        esta pessoa — o que ficar em &ldquo;Cargo&rdquo; continua seguindo o cargo,
-                        inclusive se você mudar a regra do cargo depois.
+                        Marque o que esta pessoa pode ver no app. Vale só para ela — não
+                        existe cargo por trás. Valor, fatura e pagamento não estão aqui:
+                        isso é a liberação do admin.
                       </p>
                       {PERMISSION_KEYS.map((k) => (
-                        <div key={k.key} className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-brand-900">{k.label}</span>
-                          <select
-                            className="input !w-40"
-                            name={`ovr_${k.key}`}
-                            defaultValue={
-                              m.permissions_override?.[k.key] === true
-                                ? 'sim'
-                                : m.permissions_override?.[k.key] === false
-                                  ? 'nao'
-                                  : 'cargo'
-                            }
-                          >
-                            <option value="cargo">Segue o cargo</option>
-                            <option value="sim">Liberado</option>
-                            <option value="nao">Bloqueado</option>
-                          </select>
-                        </div>
+                        <label
+                          key={k.key}
+                          className="flex min-h-touch cursor-pointer items-center gap-3 text-brand-900"
+                        >
+                          <input
+                            type="checkbox"
+                            name={`perm_${k.key}`}
+                            className="h-5 w-5 accent-brand-700"
+                            defaultChecked={m.permissions?.[k.key] !== false}
+                          />
+                          {k.label}
+                        </label>
                       ))}
-                      <button className="btn-ghost" type="submit">Salvar exceção</button>
+                      <button className="btn-ghost" type="submit">Salvar</button>
                     </form>
                   </details>
                 )}
@@ -248,79 +224,6 @@ export default async function EquipesPage() {
           </div>
         )}
       </div>
-
-      {/* Cargos com permissoes por clique */}
-      <div className="card">
-        <h2 className="mb-3 text-xl font-semibold text-brand-900">🏷️ Cargos e permissões</h2>
-        <p className="mb-4 text-brand-800">
-          Crie cargos (ex: Equipe de Limpeza, Motorista, Líder de Equipe) e marque o que cada um pode ver
-          no app. Valores e pagamentos permanecem sempre restritos à gestão, independentemente do cargo.
-        </p>
-
-        {positionList.length > 0 && (
-          <div className="mb-4 space-y-2">
-            {positionList.map((p: any) => (
-              <details key={p.id} className="rounded-card border border-brand-100 px-4 py-3">
-                <summary className="flex min-h-touch cursor-pointer flex-wrap items-center justify-between gap-2">
-                  <span>
-                    <span className="font-semibold">{p.name}</span>
-                    <span className="ml-2 text-sm text-brand-800">
-                      {PERMISSION_KEYS.filter((k) => p.permissions?.[k.key]).map((k) => k.label).join(' · ') || 'Nenhuma permissão marcada'}
-                    </span>
-                  </span>
-                  <span className="text-sm font-semibold text-brand-700">✏️ Editar</span>
-                </summary>
-                <form action={updatePositionAction} className="mt-3 border-t border-brand-100 pt-3">
-                  <input type="hidden" name="id" value={p.id} />
-                  <div className="mb-3">
-                    <label className="label" htmlFor={`pos-name-${p.id}`}>Nome do cargo</label>
-                    <input className="input" id={`pos-name-${p.id}`} name="name" required defaultValue={p.name} />
-                  </div>
-                  <p className="label">O que este cargo pode ver/fazer:</p>
-                  <div className="mb-4 space-y-1">
-                    {PERMISSION_KEYS.map((k) => (
-                      <label key={k.key} className="flex min-h-touch cursor-pointer items-center gap-3">
-                        <input
-                          type="checkbox"
-                          name={`perm_${k.key}`}
-                          defaultChecked={Boolean(p.permissions?.[k.key])}
-                          className="h-5 w-5 accent-brand-700"
-                        />
-                        {k.label}
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="btn-primary" type="submit">Salvar alterações</button>
-                  </div>
-                </form>
-                <form action={deletePositionAction.bind(null, p.id)} className="mt-2">
-                  <button className="btn-ghost !border-red-700 !text-red-700 hover:!bg-red-50" type="submit">Excluir cargo</button>
-                </form>
-              </details>
-            ))}
-          </div>
-        )}
-
-        <form action={createPositionAction} className="rounded-card bg-brand-50 p-4">
-          <div className="mb-3">
-            <label className="label" htmlFor="pos-name">Nome do cargo</label>
-            <input className="input" id="pos-name" name="name" required placeholder="Ex: Motorista" />
-          </div>
-          <p className="label">O que este cargo pode ver/fazer:</p>
-          <div className="mb-4 space-y-1">
-            {PERMISSION_KEYS.map((k) => (
-              <label key={k.key} className="flex min-h-touch cursor-pointer items-center gap-3">
-                <input type="checkbox" name={`perm_${k.key}`} defaultChecked className="h-5 w-5 accent-brand-700" />
-                {k.label}
-              </label>
-            ))}
-          </div>
-          <button className="btn-primary" type="submit">Criar cargo</button>
-        </form>
-      </div>
-
-      <InviteForm teams={teamList.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }))} />
 
       {/* Nova equipe */}
       <div className="card">

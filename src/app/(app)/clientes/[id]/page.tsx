@@ -17,7 +17,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
   const isMkt = myRole === 'marketing';
   const supabase = createClient();
   const [{ data: client }, { data: bookings }, { data: incidents }] = await Promise.all([
-    supabase.from('clients').select('*').eq('id', params.id).single(),
+    supabase.from('clients_safe').select('*').eq('id', params.id).single(),
     supabase
       .from('bookings')
       .select('*, teams(name, color)')

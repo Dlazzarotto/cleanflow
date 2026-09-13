@@ -14,7 +14,7 @@ export default async function EditarClientePage({ params }: { params: { id: stri
   const { role: myRole, userId: myId } = await requireMarketingAccess();
   const supabase = createClient();
   const { data: temComercial } = await supabase.rpc('has_commercial');
-  const { data } = await supabase.from('clients').select('*').eq('id', params.id).single();
+  const { data } = await supabase.from('clients_safe').select('*').eq('id', params.id).single();
   if (!data) notFound();
   if (myRole === 'marketing' && (data as any).created_by !== myId) redirect('/marketing');
   const c = data as Client;
