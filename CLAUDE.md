@@ -37,7 +37,7 @@ Dois campos diferentes, não confundir:
 ### Planos (migration-53)
 - **Base** $30 · só residencial · 50 clientes ativos · 2 acessos · 1 equipe
 - **Pro** $60 · só residencial · 200 clientes · 6 acessos · 2 equipes · relatórios
-- **Plus** $90 · residencial + comercial · sem limite · 3 equipes
+- **Plus** $90 · residencial + comercial · clientes ilimitados · 6 acessos · 3 equipes
 - Equipe adicional: $19,99/mês em qualquer plano.
 - **As travas rodam no banco, não na tela**: `company_max_teams/clients/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `clients_plan_limit`, `memberships_plan_limit`, `teams_plan_limit`.
 - Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.

@@ -8,7 +8,8 @@
 --
 --   Base  US$ 30  - so residencial - 50 clientes,  2 acessos, 1 equipe
 --   Pro   US$ 60  - so residencial - 200 clientes, 6 acessos, 2 equipes
---   Plus  US$ 90  - residencial + comercial - sem limite,     3 equipes
+--   Plus  US$ 90  - residencial + comercial - clientes sem limite,
+--                                            6 acessos, 3 equipes
 --
 -- Equipe adicional: US$ 19,99/mes em qualquer plano.
 --
@@ -25,18 +26,33 @@
 -- -------------------------------------------------------------
 -- 1) Migrar os dados ANTES de trocar o check constraint
 -- -------------------------------------------------------------
+-- Esta conversao so pode acontecer UMA vez: o 'plus' antigo (US$ 50, 2
+-- equipes) vira 'pro', mas 'plus' tambem e o nome do plano novo. Rodar
+-- duas vezes sem protecao rebaixaria todo Pro para Base.
+-- A guarda e o proprio constraint: enquanto ele ainda aceitar 'standard',
+-- estamos no modelo antigo. Depois da primeira execucao ele nao aceita
+-- mais, e o bloco abaixo simplesmente nao roda. Pode reexecutar a vontade.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+     where conname = 'companies_plan_check'
+       and pg_get_constraintdef(oid) like '%standard%'
+  ) then
+    alter table public.companies drop constraint companies_plan_check;
+
+    -- Quem tinha o modulo comercial sobe para Plus, independente do plano.
+    -- O 'plus' antigo equivale ao Pro novo. Todo o resto vira Base.
+    update public.companies
+       set plan = case
+         when coalesce(commercial_enabled, false) then 'plus'
+         when plan = 'plus'                       then 'pro'
+         else 'base'
+       end;
+  end if;
+end $$;
+
 alter table public.companies drop constraint if exists companies_plan_check;
-
--- Quem tinha o modulo comercial sobe para Plus, independente do plano.
--- O 'plus' antigo (US$ 50, 2 equipes) equivale ao Pro novo.
--- Todo o resto vira Base.
-update public.companies
-   set plan = case
-     when coalesce(commercial_enabled, false) then 'plus'
-     when plan = 'plus'                       then 'pro'
-     else 'base'
-   end;
-
 alter table public.companies
   add constraint companies_plan_check check (plan in ('base','pro','plus'));
 
@@ -68,10 +84,11 @@ returns int language sql stable security definer set search_path = public as $$
     from public.companies where id = p_company;
 $$;
 
+-- Plus tambem tem teto de acesso: 6.
 create or replace function public.company_max_users(p_company uuid)
 returns int language sql stable security definer set search_path = public as $$
   select case plan
-           when 'plus' then null::int
+           when 'plus' then 6
            when 'pro'  then 6
            else 2
          end
