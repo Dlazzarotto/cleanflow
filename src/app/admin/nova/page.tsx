@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PLANS, monthlyFee, maxTeams } from '@/lib/plans';
+import { DOC_LANGS } from '@/lib/i18n/documents';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function NovaEmpresaPage() {
     address: '',
     password: '',
     account_status: 'teste',
+    locale: 'en',
   });
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; temp?: string | null } | null>(null);
@@ -145,6 +147,17 @@ export default function NovaEmpresaPage() {
               <option value="ativa">Ativa</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="locale">Idioma do aplicativo para a responsável</label>
+          <select className="input" id="locale" value={form.locale} onChange={(e) => set('locale', e.target.value)}>
+            {DOC_LANGS.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-brand-700">
+            Ela pode trocar depois em Configurações.
+          </p>
         </div>
         <div>
           <label className="label" htmlFor="address">Endereço</label>

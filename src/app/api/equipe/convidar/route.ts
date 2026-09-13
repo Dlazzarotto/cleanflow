@@ -115,10 +115,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Falha no vínculo: ${memberError.message}` }, { status: 502 });
   }
 
-  // 3) Empresa ativa padrao (se a pessoa nao tiver uma)
+  // 3) Empresa ativa padrao (se a pessoa nao tiver uma).
+  // O idioma do app segue quem convidou — mesma empresa, mesma lingua de trabalho.
+  // A pessoa pode trocar depois em Configuracoes.
   const { data: settings } = await admin.from('user_settings').select('user_id').eq('user_id', userId).single();
   if (!settings) {
-    await admin.from('user_settings').insert({ user_id: userId, active_company_id: auth.companyId });
+    const { data: convidante } = await admin
+      .from('user_settings')
+      .select('locale')
+      .eq('user_id', auth.userId)
+      .single();
+    await admin.from('user_settings').insert({
+      user_id: userId,
+      active_company_id: auth.companyId,
+      locale: convidante?.locale ?? 'en',
+    });
   }
 
   // 4) Coloca na equipe, se pedido

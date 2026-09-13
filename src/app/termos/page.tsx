@@ -4,7 +4,7 @@ import { TERMS_EN, TERMS_PT, TERMS_VERSION } from '@/lib/legal/terms';
 import { PLANS } from '@/lib/plans';
 
 export default function TermosPage() {
-  const [lang, setLang] = useState<'pt' | 'en'>('pt');
+  const [lang, setLang] = useState<'pt' | 'en'>('en');
   const t = lang === 'pt' ? TERMS_PT : TERMS_EN;
 
   return (

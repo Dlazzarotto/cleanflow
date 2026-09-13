@@ -161,7 +161,7 @@ export default function EstimateForm({
     }
   );
   const [frequency, setFrequency] = useState(initial?.frequency ?? 'quinzenal');
-  const [language, setLanguage] = useState((initial as any)?.language ?? 'pt');
+  const [language, setLanguage] = useState((initial as any)?.language ?? 'en');
   const [laundry, setLaundry] = useState(initial?.laundry ?? false);
   const [laundryLoads, setLaundryLoads] = useState(initial?.laundry_loads ?? 1);
   const [deepClean, setDeepClean] = useState(initial?.deep_clean ?? false);

@@ -2,7 +2,13 @@
 
 SaaS multiempresa para gestão de empresas de limpeza (residencial e comercial).
 Dono: David Lazzarotto (CLEANFLOW APP LLC). Piloto: Wait Happy Cleaning Services Inc.
-Idioma de trabalho com o David: **português**. Interface do produto: português (multilíngue pt/en/es/fr nos documentos ao cliente).
+Idioma de trabalho com o David: **português**.
+
+**Idioma do produto: o inglês é a língua base.** O público são donos de empresa de limpeza nos EUA que falam inglês, português, espanhol e francês — os quatro idiomas são suportados, mas o inglês é o padrão e os outros são escolha. Todo default de idioma no código e no banco é `'en'` (migration-52); `pt`/`es`/`fr` continuam válidos em todos os check constraints. Ao adicionar qualquer campo ou tela com idioma, o padrão é inglês.
+
+Dois campos diferentes, não confundir:
+- `clients.language` (e `estimates`/`commercial_estimates`) — idioma da **cliente final**: documentos, faturas, SMS e e-mail. Funciona.
+- `user_settings.locale` — idioma da **interface** para o dono da empresa. O seletor existe em Configurações e grava no banco, mas nenhuma tela lê esse valor ainda: os textos estão escritos direto no JSX, em português. Ver pendências.
 
 ## Stack
 
@@ -57,6 +63,7 @@ Idioma de trabalho com o David: **português**. Interface do produto: português
 
 ## Pendências abertas (ago/2026)
 
+- **Interface multilíngue não existe.** `user_settings.locale` é gravado e nunca lido — o seletor de idioma em Configurações não traduz nada hoje. Como o público são donos que falam quatro idiomas, as telas precisam sair do português cravado no JSX para um dicionário indexado por `locale`. Trabalho grande (dezenas de arquivos); decidir escopo com o David antes de começar.
 - Aplicar `cleanflow-sms-mensagens-v9` (caixa 💬 Mensagens, webhook STOP, consentimento): integrar `SmsConsentField` em `clientes/novo` e `clientes/[id]/editar` (gravar via `record_sms_consent` na action); migrar chamadas antigas `sendSms(tel, texto)` para `sendSms({companyId, clientId, to, body, kind})`.
 - Twilio: toll-free verification da CLEANFLOW APP LLC; webhook `https://cleanflows.app/api/sms/webhook`.
 - Lojas de app: D-U-N-S solicitado (aguardar); criar `david@cleanflows.app`; página da empresa no site + política de privacidade; Capacitor já configurado (`app.cleanflows.equipe`), app gratuito.

@@ -5,6 +5,7 @@ import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
 import { planName, maxTeams, monthlyFee } from '@/lib/plans';
+import { DOC_LANGS } from '@/lib/i18n/documents';
 import EmailDiagnostic from '@/components/EmailDiagnostic';
 import ReminderPanel from '@/components/ReminderPanel';
 import SmsDiagnostic from '@/components/SmsDiagnostic';
@@ -12,13 +13,6 @@ import { saveReminderSettingsAction } from '@/lib/actions';
 import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
-
-const LOCALES = [
-  { code: 'pt', label: '🇧🇷 Português' },
-  { code: 'en', label: '🇺🇸 English' },
-  { code: 'es', label: '🇪🇸 Español' },
-  { code: 'fr', label: '🇫🇷 Français' },
-];
 
 export default async function ConfiguracoesPage() {
   const { supabase, userId, companyId, role, fullName } = await getAuth();
@@ -35,7 +29,7 @@ export default async function ConfiguracoesPage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const locale = (settings as any)?.locale ?? 'pt';
+  const locale = (settings as any)?.locale ?? 'en';
   const email = authUser?.user?.email ?? '';
 
   return (
@@ -71,7 +65,7 @@ export default async function ConfiguracoesPage() {
           <div className="grow">
             <label className="label" htmlFor="locale">Idioma</label>
             <select className="input" id="locale" name="locale" defaultValue={locale}>
-              {LOCALES.map((l) => (
+              {DOC_LANGS.map((l) => (
                 <option key={l.code} value={l.code}>{l.label}</option>
               ))}
             </select>

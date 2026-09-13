@@ -31,7 +31,7 @@ export async function createClientAction(formData: FormData) {
     preferences: String(formData.get('preferences') ?? '') || null,
     products_notes: String(formData.get('products_notes') ?? '') || null,
     frequency: String(formData.get('frequency') ?? '') || null,
-    language: String(formData.get('language') ?? 'pt'),
+    language: String(formData.get('language') ?? 'en'),
     status: String(formData.get('status') ?? 'ativo'),
     source: String(formData.get('source') ?? '') || null,
     entry_source: formData.get('from_marketing') === 'on' ? 'marketing' : 'organico',
@@ -321,7 +321,7 @@ export async function updateClientAction(id: string, formData: FormData) {
       preferences: String(formData.get('preferences') ?? '') || null,
       products_notes: String(formData.get('products_notes') ?? '') || null,
       frequency: String(formData.get('frequency') ?? '') || null,
-      language: String(formData.get('language') ?? 'pt'),
+      language: String(formData.get('language') ?? 'en'),
       status: String(formData.get('status') ?? 'ativo'),
       source: String(formData.get('source') ?? '') || null,
       payment_method: String(formData.get('payment_method') ?? '') || null,
@@ -534,7 +534,7 @@ export async function updateMyNameAction(formData: FormData) {
 
 export async function saveLocaleAction(formData: FormData) {
   const { supabase, userId, companyId } = await getAuth();
-  const locale = String(formData.get('locale') ?? 'pt');
+  const locale = String(formData.get('locale') ?? 'en');
   const { error } = await supabase.from('user_settings').upsert({
     user_id: userId,
     active_company_id: companyId,
@@ -723,7 +723,7 @@ export async function createLeadAction(formData: FormData) {
     lat: formData.get('lat') ? Number(formData.get('lat')) : null,
     lng: formData.get('lng') ? Number(formData.get('lng')) : null,
     preferences: String(formData.get('preferences') ?? '') || null,
-    language: String(formData.get('language') ?? 'pt'),
+    language: String(formData.get('language') ?? 'en'),
     source: String(formData.get('source') ?? '') || null,
     status: 'lead',
     entry_source: 'marketing',

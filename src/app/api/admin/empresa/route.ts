@@ -30,6 +30,8 @@ export async function POST(request: Request) {
   const ownerName = String(body.owner_name ?? '').trim();
   const plan = body.plan === 'plus' ? 'plus' : 'standard';
   const extraTeams = plan === 'plus' ? Math.max(0, Number(body.extra_teams ?? 0)) : 0;
+  // Idioma do aplicativo escolhido no cadastro da responsável. Inglês é o padrão.
+  const locale = ['en', 'pt', 'es', 'fr'].includes(String(body.locale)) ? String(body.locale) : 'en';
 
   if (!name || !ownerEmail || !ownerName) {
     return NextResponse.json(
@@ -106,22 +108,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Falha no vínculo: ${memberError.message}` }, { status: 502 });
   }
 
-  // 4) Empresa ativa padrao para o usuario, se ele ainda nao tiver
+  // 4) Empresa ativa padrao e idioma do app para o usuario, se ele ainda nao tiver.
+  // Se ja tiver, o idioma dele e preferencia pessoal — nao sobrescrevemos aqui.
   const { data: settings } = await admin
     .from('user_settings')
     .select('user_id')
     .eq('user_id', userId)
     .single();
+
+  let avisoSettings: string | null = null;
   if (!settings) {
-    await admin.from('user_settings').insert({ user_id: userId, active_company_id: company.id });
+    const { data: criado, error: settingsError } = await admin
+      .from('user_settings')
+      .insert({ user_id: userId, active_company_id: company.id, locale })
+      .select('user_id');
+    if (settingsError || !criado?.length) {
+      avisoSettings =
+        ' Atenção: não foi possível gravar o idioma e a empresa ativa do responsável — confira em Configurações depois do primeiro acesso.';
+    }
+  } else {
+    avisoSettings = ' O responsável já tinha conta; o idioma do app dele foi mantido como estava.';
   }
+
+  const base = tempPassword
+    ? 'Empresa criada. Anote a senha temporária e entregue ao responsável.'
+    : 'Empresa criada. O responsável já tinha login e usará a mesma senha.';
 
   return NextResponse.json({
     ok: true,
     company_id: company.id,
     temp_password: tempPassword,
-    message: tempPassword
-      ? 'Empresa criada. Anote a senha temporária e entregue ao responsável.'
-      : 'Empresa criada. O responsável já tinha login e usará a mesma senha.',
+    message: base + (avisoSettings ?? ''),
   });
 }
