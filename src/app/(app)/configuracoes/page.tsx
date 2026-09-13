@@ -4,7 +4,7 @@ import { updateMyNameAction, saveLocaleAction, updateCompanyAction } from '@/lib
 import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
-import { planName, maxTeams, monthlyFee } from '@/lib/plans';
+import { planName, maxTeams, monthlyFee, maxClients, maxUsers, hasReports, hasCommercial, limitLabel } from '@/lib/plans';
 import { DOC_LANGS } from '@/lib/i18n/documents';
 import EmailDiagnostic from '@/components/EmailDiagnostic';
 import ReminderPanel from '@/components/ReminderPanel';
@@ -127,8 +127,16 @@ export default async function ConfiguracoesPage() {
           <h2 className="text-xl font-semibold text-brand-900">Assinatura CleanFlow</h2>
           <p className="text-brand-800">
             Plano <strong>{planName((company as any).plan)}</strong> ·{' '}
-            até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s) ·{' '}
             US$ {Number((company as any).monthly_fee ?? monthlyFee((company as any).plan, (company as any).extra_teams ?? 0)).toFixed(2)}/mês
+          </p>
+          <p className="text-brand-800">
+            {limitLabel(maxClients((company as any).plan), 'cliente ativo', 'clientes ativos')} ·{' '}
+            {limitLabel(maxUsers((company as any).plan), 'acesso', 'acessos')} ·{' '}
+            até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s)
+          </p>
+          <p className="text-brand-800">
+            {hasReports((company as any).plan) ? '✓' : '—'} Relatórios gerenciais ·{' '}
+            {hasCommercial((company as any).plan) ? '✓' : '—'} Limpeza comercial
           </p>
           {(company as any).next_due_date && (
             <p className="text-brand-800">

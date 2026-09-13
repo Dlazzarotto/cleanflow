@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PLANS, planKey, EXTRA_TEAM_PRICE } from '@/lib/plans';
 import { notFound } from 'next/navigation';
 import { requirePlatformAdmin } from '@/lib/platform';
 import {
@@ -104,13 +105,16 @@ export default async function AdminCompanyPage({ params }: { params: { id: strin
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="label" htmlFor="plan">Plano</label>
-            <select className="input" id="plan" name="plan" defaultValue={c.plan ?? 'standard'}>
-              <option value="standard">Standard — $30/mês · 1 equipe</option>
-              <option value="plus">Plus — $50/mês · 2 equipes</option>
+            <select className="input" id="plan" name="plan" defaultValue={planKey(c.plan)}>
+              {Object.values(PLANS).map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.name} — ${p.price}/mês · {p.baseTeams} equipe(s)
+                </option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="extra_teams">Equipes adicionais ($10/mês cada)</label>
+            <label className="label" htmlFor="extra_teams">Equipes adicionais (US$ {EXTRA_TEAM_PRICE}/mês cada)</label>
             <input className="input" id="extra_teams" name="extra_teams" type="number" min={0} max={20} defaultValue={c.extra_teams ?? 0} />
           </div>
         </div>
@@ -150,7 +154,12 @@ export default async function AdminCompanyPage({ params }: { params: { id: strin
         </div>
 
         <div className="rounded-card bg-brand-50 p-4">
-          <p className="mb-3 font-semibold text-brand-900">🏢 Módulo de Limpeza Comercial</p>
+          <p className="mb-3 font-semibold text-brand-900">🏢 Limpeza Comercial</p>
+          <p className="mb-3 text-sm text-brand-800">
+            O comercial faz parte do plano <strong>Plus</strong> — quem está no Plus já tem,
+            e a mensalidade dele não soma nada a mais. A chave abaixo é só a exceção:
+            liberar o comercial para uma empresa que está no Base ou no Pro.
+          </p>
           <label className="flex min-h-touch cursor-pointer items-center gap-3 font-medium text-brand-800">
             <input
               type="checkbox"
@@ -158,10 +167,10 @@ export default async function AdminCompanyPage({ params }: { params: { id: strin
               className="h-5 w-5 accent-brand-700"
               defaultChecked={Boolean(c.commercial_enabled)}
             />
-            Empresa contratou o módulo comercial
+            Liberar comercial fora do Plus
           </label>
           <div className="mt-3 max-w-xs">
-            <label className="label" htmlFor="commercial_price">Valor do módulo (USD/mês)</label>
+            <label className="label" htmlFor="commercial_price">Valor cobrado pela exceção (USD/mês)</label>
             <input
               className="input"
               id="commercial_price"

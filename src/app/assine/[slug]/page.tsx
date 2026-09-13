@@ -67,7 +67,7 @@ export default async function AssinePage({ params }: { params: { slug: string } 
         </div>
 
         {/* Planos */}
-        <div className="mb-10 grid gap-4 md:grid-cols-2">
+        <div className="mb-10 grid gap-4 md:grid-cols-3">
           {Object.values(PLANS).map((p) => (
             <div key={p.key} className="rounded-card bg-white p-6">
               <p className="text-2xl font-bold text-brand-900">{p.name}</p>

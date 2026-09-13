@@ -15,7 +15,7 @@ import { PERMISSION_KEYS } from '@/lib/permissions';
 import InviteForm from '@/components/InviteForm';
 import ResetAccessButton from '@/components/ResetAccessButton';
 import type { Team } from '@/lib/types';
-import { maxTeams, planName, PLANS } from '@/lib/plans';
+import { maxTeams, planName, planKey, PLANS, EXTRA_TEAM_PRICE } from '@/lib/plans';
 import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
@@ -44,7 +44,7 @@ export default async function EquipesPage() {
     supabase.from('positions').select('*').order('name'),
     supabase.from('companies').select('plan, extra_teams').eq('id', companyId).single(),
   ]);
-  const plan = (companyRow as any)?.plan ?? 'standard';
+  const plan = planKey((companyRow as any)?.plan);
   const extras = (companyRow as any)?.extra_teams ?? 0;
   const limite = maxTeams(plan, extras);
   const positionList = positions ?? [];
@@ -283,9 +283,9 @@ export default async function EquipesPage() {
         {teamList.filter((t) => t.active).length >= limite && (
           <p className="mt-2 text-brand-800">
             Você atingiu o limite do seu plano.{' '}
-            {plan === 'standard'
-              ? `O plano Plus inclui ${PLANS.plus.baseTeams} equipes por US$ ${PLANS.plus.price}/mês.`
-              : `Equipes adicionais custam US$ ${PLANS.plus.extraTeamPrice}/mês cada.`}{' '}
+            {planKey(plan) === 'plus'
+              ? `Equipes adicionais custam US$ ${EXTRA_TEAM_PRICE}/mês cada.`
+              : `O plano ${PLANS.plus.name} inclui ${PLANS.plus.baseTeams} equipes por US$ ${PLANS.plus.price}/mês, e equipe adicional custa US$ ${EXTRA_TEAM_PRICE}/mês em qualquer plano.`}{' '}
             Fale com o suporte do CleanFlow para fazer o upgrade.
           </p>
         )}

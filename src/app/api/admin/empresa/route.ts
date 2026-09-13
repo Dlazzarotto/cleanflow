@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { getPlatformAdmin } from '@/lib/platform';
-import { monthlyFee } from '@/lib/plans';
+import { monthlyFee, planKey } from '@/lib/plans';
 
 /**
  * POST /api/admin/empresa — cria uma nova empresa assinante + o acesso do dono.
@@ -28,8 +28,9 @@ export async function POST(request: Request) {
   const name = String(body.name ?? '').trim();
   const ownerEmail = String(body.owner_email ?? '').trim().toLowerCase();
   const ownerName = String(body.owner_name ?? '').trim();
-  const plan = body.plan === 'plus' ? 'plus' : 'standard';
-  const extraTeams = plan === 'plus' ? Math.max(0, Number(body.extra_teams ?? 0)) : 0;
+  const plan = planKey(String(body.plan ?? ''));
+  // Equipe adicional vale em qualquer plano.
+  const extraTeams = Math.max(0, Number(body.extra_teams ?? 0));
   // Idioma do aplicativo escolhido no cadastro da responsável. Inglês é o padrão.
   const locale = ['en', 'pt', 'es', 'fr'].includes(String(body.locale)) ? String(body.locale) : 'en';
 

@@ -111,9 +111,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Modo ativo: residencial ou comercial
   const { data: modoAtual } = await supabase.rpc('current_mode');
   const { data: moduloComercial } = await supabase.rpc('has_commercial');
+  const { data: temRelatorios } = await supabase.rpc('has_reports');
   const modo: 'residencial' | 'comercial' = modoAtual === 'comercial' ? 'comercial' : 'residencial';
 
-  const navGestao = modo === 'comercial' ? NAV_COMERCIAL : NAV_RESIDENCIAL;
+  // Relatorios sao do Pro para cima. Some do menu no Base — a tela tambem
+  // recusa por conta propria, entao esconder aqui e so para nao oferecer.
+  const navBase = modo === 'comercial' ? NAV_COMERCIAL : NAV_RESIDENCIAL;
+  const navGestao = temRelatorios ? navBase : navBase.filter((i) => i.href !== '/relatorios');
   const nav = role === 'cleaner' ? CLEANER_NAV : role === 'marketing' ? MARKETING_NAV : navGestao;
 
   return (

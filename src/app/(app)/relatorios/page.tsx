@@ -73,10 +73,38 @@ export default async function RelatoriosPage({
   searchParams: { dias?: string };
 }) {
   await requireManager();
-  const dias = [30, 90, 180].includes(Number(searchParams.dias)) ? Number(searchParams.dias) : 30;
-  const since = new Date(Date.now() - dias * 86400000);
 
   const supabase = createClient();
+
+  // Relatorios sao do Pro para cima. Quem esta no Base ve o convite, nao a tela.
+  const { data: temRelatorios } = await supabase.rpc('has_reports');
+  if (!temRelatorios) {
+    return (
+      <div className="max-w-xl">
+        <BackLink href="/dashboard" label="Dashboard" />
+        <h1 className="mb-3 mt-3 text-3xl font-bold text-brand-900">Relatórios</h1>
+        <div className="card">
+          <p className="text-brand-900">
+            Os relatórios gerenciais fazem parte do plano <strong>Pro</strong>.
+          </p>
+          <p className="mt-3 text-brand-800">
+            Eles mostram o tempo real gasto em cada casa, o trajeto entre uma limpeza e
+            outra e o desempenho por equipe — o que dá para ajustar preço e rota com
+            número na mão, em vez de no chute.
+          </p>
+          <p className="mt-3 text-brand-800">
+            Para liberar, fale com o CleanFlow.
+          </p>
+          <Link className="btn-primary mt-4 inline-block" href="/configuracoes">
+            Ver meu plano
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const dias = [30, 90, 180].includes(Number(searchParams.dias)) ? Number(searchParams.dias) : 30;
+  const since = new Date(Date.now() - dias * 86400000);
   const { data: shiftRows } = await supabase
     .from('work_shifts')
     .select('person_name, started_at, ended_at')

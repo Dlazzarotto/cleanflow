@@ -2,12 +2,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { PLANS, monthlyFee, maxTeams } from '@/lib/plans';
+import { PLANS, monthlyFee, maxTeams, EXTRA_TEAM_PRICE, type PlanKey } from '@/lib/plans';
 import { DOC_LANGS } from '@/lib/i18n/documents';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
-  const [plan, setPlan] = useState<'standard' | 'plus'>('standard');
+  const [plan, setPlan] = useState<PlanKey>('base');
   const [extraTeams, setExtraTeams] = useState(0);
   const [form, setForm] = useState({
     name: '',
@@ -57,15 +57,12 @@ export default function NovaEmpresaPage() {
 
       <div className="card mb-6 space-y-4">
         <p className="text-xl font-semibold text-brand-900">Plano</p>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           {Object.values(PLANS).map((p) => (
             <button
               key={p.key}
               type="button"
-              onClick={() => {
-                setPlan(p.key);
-                if (p.key === 'standard') setExtraTeams(0);
-              }}
+              onClick={() => setPlan(p.key)}
               className={`rounded-card border-2 p-4 text-left ${
                 plan === p.key ? 'border-brand-700 bg-brand-50' : 'border-brand-100 bg-white'
               }`}
@@ -83,10 +80,9 @@ export default function NovaEmpresaPage() {
           ))}
         </div>
 
-        {plan === 'plus' && (
-          <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="label" htmlFor="extra">Equipes adicionais (US$ 10/mês cada)</label>
+              <label className="label" htmlFor="extra">Equipes adicionais (US$ {EXTRA_TEAM_PRICE}/mês cada)</label>
               <input
                 className="input !w-32"
                 id="extra"
@@ -97,8 +93,7 @@ export default function NovaEmpresaPage() {
                 onChange={(e) => setExtraTeams(Math.max(0, Number(e.target.value)))}
               />
             </div>
-          </div>
-        )}
+        </div>
 
         <div className="rounded-card bg-brand-900 p-4 text-white">
           <p className="text-brand-100">Mensalidade</p>

@@ -32,7 +32,17 @@ Dois campos diferentes, não confundir:
 ### Dois modos (migration-50)
 - `user_settings.active_mode` ∈ residencial|comercial; `current_mode()` / `set_mode()`.
 - Menus separados no `layout.tsx` (NAV_RESIDENCIAL / NAV_COMERCIAL). **Toda tela de listagem filtra pelo modo** (clientes por `client_type`; agendamentos/faturas/inspeções via ids dos clientes do modo; calendário via `/api/bookings`).
-- Módulo comercial é assinatura à parte: `companies.commercial_enabled`; `has_commercial()`; trava no banco impede cliente comercial sem o módulo.
+- Comercial é o que define o plano **Plus** (migration-53). `has_commercial()` = `plan = 'plus' or commercial_enabled`; trava no banco impede cliente comercial sem isso. `commercial_enabled` deixou de ser assinatura à parte e virou só exceção manual (liberar comercial para quem está no Base/Pro).
+
+### Planos (migration-53)
+- **Base** $30 · só residencial · 50 clientes ativos · 2 acessos · 1 equipe
+- **Pro** $60 · só residencial · 200 clientes · 6 acessos · 2 equipes · relatórios
+- **Plus** $90 · residencial + comercial · sem limite · 3 equipes
+- Equipe adicional: $19,99/mês em qualquer plano.
+- **As travas rodam no banco, não na tela**: `company_max_teams/clients/users()`, `company_monthly_fee()`, `has_commercial()`, `has_reports()` e os triggers `clients_plan_limit`, `memberships_plan_limit`, `teams_plan_limit`.
+- Os mesmos números estão em `src/lib/plans.ts` (para exibir). **Mudou num lugar → mudar no outro**, senão a tela promete o que o banco recusa.
+- Clientes com status `lead`/`inativo`/`perdido`/`deletado` não ocupam vaga — só `ativo` e `em_espera`.
+- Nomes antigos: `standard` → Base, `plus` antigo → Pro. O nome `plus` colide, então migration-53 e deploy andam juntos.
 
 ### Regras de negócio que já causaram incidentes
 1. **`clients.default_price` é a fonte única do preço** (migrations 42-43). Mudou no cadastro → propaga para limpezas não pagas e faturas abertas. Exceção: `price_manual` na limpeza.
@@ -75,6 +85,7 @@ Dois campos diferentes, não confundir:
 ```sql
 select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname='public' and proname in
- ('current_company_id','is_manager','has_commercial','current_mode','can_send_sms','sms_unread_count');
+ ('current_company_id','is_manager','has_commercial','has_reports','current_mode',
+  'company_max_clients','company_max_users','can_send_sms','sms_unread_count');
 ```
 Faltando alguma → a migration correspondente não rodou.
