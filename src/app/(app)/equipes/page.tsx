@@ -11,8 +11,10 @@ import {
   deletePositionAction,
   setMemberPositionAction,
   setMemberPermissionOverrideAction,
+  setMemberValuesAction,
 } from '@/lib/actions';
 import { PERMISSION_KEYS } from '@/lib/permissions';
+import { roleLabel, isField, isAdmin, valuesKeyApplies } from '@/lib/roles';
 import InviteForm from '@/components/InviteForm';
 import ResetAccessButton from '@/components/ResetAccessButton';
 import type { Team } from '@/lib/types';
@@ -21,16 +23,9 @@ import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
 
-const ROLE_LABEL: Record<string, string> = {
-  owner: 'Dono(a)',
-  admin: 'Admin',
-  supervisor: 'Supervisor(a)',
-  cleaner: 'Equipe',
-  marketing: 'Marketing',
-};
-
 export default async function EquipesPage() {
-  await requireManager();
+  const { role: meuPapel } = await requireManager();
+  const souAdmin = isAdmin(meuPapel);
   const supabase = createClient();
   const { data: companyId } = await supabase.rpc('current_company_id');
 
@@ -38,7 +33,7 @@ export default async function EquipesPage() {
     supabase.from('teams').select('*').order('name'),
     supabase
       .from('memberships')
-      .select('id, user_id, full_name, role, active, position_id, permissions_override, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
+      .select('id, user_id, full_name, role, active, position_id, permissions_override, can_see_values, invite_sent_at, invite_sent_to, invite_opened_at, first_login_at, last_seen_at')
       .eq('company_id', companyId)
       .order('full_name'),
     supabase.from('team_members').select('team_id, profile_id'),
@@ -83,7 +78,7 @@ export default async function EquipesPage() {
                   <td className="py-3">
                     <p className="font-medium">{m.full_name}</p>
                     <p className="text-sm text-brand-800">
-                      {ROLE_LABEL[m.role] ?? m.role}
+                      {roleLabel(m.role)}
                       {!m.active && ' · desativado'}
                     </p>
                   </td>
@@ -153,8 +148,8 @@ export default async function EquipesPage() {
         ) : (
           <div className="space-y-2">
             {[
-              { titulo: '🏢 Gestão', roles: ['owner', 'admin', 'supervisor'] },
-              { titulo: '🧹 Equipe de limpeza (campo)', roles: ['cleaner'] },
+              { titulo: '🏢 Gestão', roles: ['admin', 'manager', 'supervisor'] },
+              { titulo: '🧹 Equipe de limpeza (campo)', roles: ['motorista', 'helper', 'outros'] },
               { titulo: '📣 Marketing (sem trabalho de campo)', roles: ['marketing'] },
             ].map((grupo) => {
               const pessoas = memberList.filter((m: any) => grupo.roles.includes(m.role));
@@ -168,10 +163,14 @@ export default async function EquipesPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className={`font-semibold ${!m.active ? 'line-through opacity-60' : ''}`}>{m.full_name}</p>
-                  <p className="text-sm text-brand-800">{ROLE_LABEL[m.role] ?? m.role}{!m.active ? ' · acesso desativado' : ''}</p>
+                  <p className="text-sm text-brand-800">
+                    {roleLabel(m.role)}
+                    {valuesKeyApplies(m.role) && (m.can_see_values ? ' · vê valores' : ' · sem valores')}
+                    {!m.active ? ' · acesso desativado' : ''}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {m.role === 'cleaner' && (
+                  {isField(m.role) && (
                     <form action={setMemberPositionAction} className="flex items-center gap-2">
                       <input type="hidden" name="membership_id" value={m.id} />
                       <select className="input !w-48" name="position_id" defaultValue={m.position_id ?? ''}>
@@ -181,6 +180,17 @@ export default async function EquipesPage() {
                         ))}
                       </select>
                       <button className="btn-ghost" type="submit">Aplicar</button>
+                    </form>
+                  )}
+                  {valuesKeyApplies(m.role) && souAdmin && (
+                    <form action={setMemberValuesAction.bind(null, m.id, !m.can_see_values)}>
+                      <button
+                        className={m.can_see_values ? 'btn-ghost !border-brand-700 !text-brand-700' : 'btn-ghost'}
+                        type="submit"
+                        title="Só o admin libera valores. Quem não tem liberação não vê preço, fatura nem pagamento."
+                      >
+                        {m.can_see_values ? '💲 Vê valores — tirar' : '💲 Liberar valores'}
+                      </button>
                     </form>
                   )}
                   <form action={setMembershipActiveAction.bind(null, m.id, !m.active)}>
@@ -193,7 +203,7 @@ export default async function EquipesPage() {
                 <div className="mt-2">
                   <ResetAccessButton membershipId={m.id} personName={m.full_name} />
                 </div>
-                {m.role === 'cleaner' && (
+                {isField(m.role) && (
                   <details className="mt-2">
                     <summary className="min-h-touch cursor-pointer py-2 font-medium text-brand-700">
                       Exceção só para {(m.full_name ?? '').split(' ')[0]}

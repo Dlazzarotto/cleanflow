@@ -25,7 +25,12 @@ Dois campos diferentes, não confundir:
 - `supabase/migration-NN-*.sql` — histórico numerado (última aplicada: verificar com o David). O David roda cada SQL no SQL Editor do Supabase manualmente.
 
 ### Multiempresa e papéis
-- `memberships` liga usuário ↔ empresa com papel (owner/admin/supervisor/cleaner/marketing). `current_company_id()` e `is_manager()` no banco; RLS por `company_id` em tudo.
+- `memberships` liga usuário ↔ empresa com papel. **Lista única em `src/lib/roles.ts`** — nunca repetir os nomes em tela; o banco tem a mesma lista no check constraint e em `is_admin()`/`is_manager()`/`is_field()` (migration-55).
+- **Papéis**: `admin` (quem abre a empresa — acesso total, único que concede permissão) · `manager` (escritório: agenda e equipes) · `supervisor` (campo: cuida das equipes) · `motorista`/`helper`/`outros` (equipe) · `marketing` (**não é da equipe** — pessoa/empresa de fora que só cadastra lead e vê o que ela mesma cadastrou; escopo na migration-20).
+- Nomes antigos: `owner`→`admin`, `admin` velho→`manager`, `cleaner`→`helper`. `admin` é nome válido nos dois modelos, então a migration-55 é guardada pelo constraint.
+- **Valores não vêm do papel.** `can_see_values()` = admin sempre; manager/supervisor só se o admin ligar `memberships.can_see_values` (nasce desligada); equipe e marketing nunca. `guard_membership_admin()` impede que alguém se auto-libere. Preço no cadastro do cliente é mascarado pela view `clients_safe` e protegido na escrita por `guard_client_price()`.
+- **Escopo por equipe**: manager/supervisor veem as equipes em que estão (`team_members`); quem não tem nenhuma atribuída vê todas — é o caso do escritório. `sees_team()` decide.
+- `current_company_id()` e `is_manager()` no banco; RLS por `company_id` em tudo.
 - Equipe de campo (cleaner) **jamais** vê valores/pagamentos — isso está no banco (views e RLS), não só na tela.
 - `platform_admins` = David; painel `/admin`.
 
@@ -51,7 +56,7 @@ Dois campos diferentes, não confundir:
 2. **Fatura só nasce após o serviço** (migration-44) — trigger no check-out; nunca para `scheduled_at` futuro. Vencimento conta da data da limpeza.
 3. **Frequências**: semanal(7) / quinzenal(14) / tres_semanas(21) / mensal(28). Se tocar em uma, tocar em TODAS: telas, actions, tipos, traduções e check constraint do banco.
 4. **Tempo estimado nunca aparece para o cliente** — só interno.
-5. **Cliente "deletado" = banido** (motivo obrigatório, só owner, senha). Não é exclusão.
+5. **Cliente "deletado" = banido** (motivo obrigatório, só `admin`, senha). Não é exclusão.
 6. **O sistema nunca impede a equipe de trabalhar por configuração** — registra e sinaliza (migration-39).
 
 ## Regras de código — obrigatórias
@@ -87,7 +92,8 @@ Dois campos diferentes, não confundir:
 ```sql
 select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname='public' and proname in
- ('current_company_id','is_manager','has_commercial','has_reports','current_mode',
+ ('current_company_id','is_manager','is_admin','can_see_values','sees_team',
+  'has_commercial','has_reports','current_mode',
   'company_max_clients','company_max_users','can_send_sms','sms_unread_count');
 ```
 Faltando alguma → a migration correspondente não rodou.

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { roleKey, isField, isMarketing } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 import { getPlatformAdmin } from '@/lib/platform';
 import AppShell from '@/components/AppShell';
@@ -106,7 +107,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }));
 
   const companyName = (membership as any)?.companies?.name ?? 'Sua empresa';
-  const role = (membership as any)?.role ?? 'cleaner';
+  const role = roleKey((membership as any)?.role);
 
   // Modo ativo: residencial ou comercial
   const { data: modoAtual } = await supabase.rpc('current_mode');
@@ -118,7 +119,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // recusa por conta propria, entao esconder aqui e so para nao oferecer.
   const navBase = modo === 'comercial' ? NAV_COMERCIAL : NAV_RESIDENCIAL;
   const navGestao = temRelatorios ? navBase : navBase.filter((i) => i.href !== '/relatorios');
-  const nav = role === 'cleaner' ? CLEANER_NAV : role === 'marketing' ? MARKETING_NAV : navGestao;
+  const nav = isField(role) ? CLEANER_NAV : isMarketing(role) ? MARKETING_NAV : navGestao;
 
   return (
     <AppShell
@@ -129,7 +130,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       empresas={empresas}
       isPlatformAdmin={Boolean(platform)}
       modo={modo}
-      temComercial={Boolean(moduloComercial) && role !== 'cleaner' && role !== 'marketing'}
+      temComercial={Boolean(moduloComercial) && !isField(role) && !isMarketing(role)}
     >
       {children}
     </AppShell>

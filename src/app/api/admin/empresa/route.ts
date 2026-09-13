@@ -110,7 +110,7 @@ export async function POST(request: Request) {
   const { error: memberError } = await admin.from('memberships').insert({
     user_id: userId,
     company_id: company.id,
-    role: 'owner',
+    role: 'admin',
     full_name: ownerName,
     active: true,
   });

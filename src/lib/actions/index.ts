@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
 import { PERMISSION_KEYS } from '@/lib/permissions';
+import { isAdmin, valuesKeyApplies } from '@/lib/roles';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
@@ -502,6 +503,28 @@ export async function deletePositionAction(id: string) {
  * "Cargo" sai do override, para que mudar a regra do cargo continue
  * valendo para essa pessoa.
  */
+/**
+ * Liberar ou tirar a visao de valores de um manager/supervisor.
+ * So o admin chega aqui — e o banco confere de novo no trigger
+ * guard_membership_admin(), entao burlar a tela nao adianta.
+ */
+export async function setMemberValuesAction(membershipId: string, liberar: boolean) {
+  const { supabase, role } = await getAuth();
+  if (!isAdmin(role)) {
+    throw new Error('Apenas o admin da empresa pode liberar valores.');
+  }
+  const { data: linhas, error } = await supabase
+    .from('memberships')
+    .update({ can_see_values: liberar })
+    .eq('id', membershipId)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!linhas?.length) {
+    throw new Error('Não foi possível mudar a liberação de valores.');
+  }
+  revalidatePath('/equipes');
+}
+
 export async function setMemberPermissionOverrideAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const membershipId = String(formData.get('membership_id'));
@@ -577,7 +600,7 @@ export async function saveLocaleAction(formData: FormData) {
 
 export async function updateCompanyAction(formData: FormData) {
   const { supabase, companyId, role } = await getAuth();
-  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+  if (!['admin', 'manager', 'supervisor'].includes(role)) {
     throw new Error('Apenas a gestão pode editar os dados da empresa');
   }
   const { data: linhasCompanies17, error } = await supabase
@@ -629,7 +652,7 @@ export async function banClientAction(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const { supabase, userId, role } = await getAuth();
 
-  if (role !== 'owner') {
+  if (role !== 'admin') {
     return { ok: false, error: 'Apenas o dono da empresa pode banir um cliente.' };
   }
   const reason = input.reason.trim();
@@ -680,7 +703,7 @@ export async function banClientAction(input: {
 
 export async function unbanClientAction(id: string) {
   const { supabase, role } = await getAuth();
-  if (role !== 'owner') {
+  if (role !== 'admin') {
     throw new Error('Apenas o dono da empresa pode reverter um banimento.');
   }
   const { data: linhasClients19, error } = await supabase
@@ -796,7 +819,7 @@ export async function quickUpdateClientBillingAction(formData: FormData) {
 // ---------- MENSAGENS AUTOMATICAS ----------
 export async function saveReminderSettingsAction(formData: FormData) {
   const { supabase, companyId, role } = await getAuth();
-  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+  if (!['admin', 'manager', 'supervisor'].includes(role)) {
     throw new Error('Apenas a gestão altera as mensagens automáticas');
   }
 

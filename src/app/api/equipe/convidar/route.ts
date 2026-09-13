@@ -39,9 +39,9 @@ export async function POST(request: Request) {
 
   const email = (body.email ?? '').trim().toLowerCase();
   const fullName = (body.full_name ?? '').trim();
-  const role = ['admin', 'supervisor', 'cleaner', 'marketing'].includes(body.role ?? '')
+  const role = ['admin', 'manager', 'supervisor', 'motorista', 'helper', 'outros', 'marketing'].includes(body.role ?? '')
     ? body.role!
-    : 'cleaner';
+    : 'helper';
   if (!email || !fullName) {
     return NextResponse.json({ error: 'Email e nome são obrigatórios.' }, { status: 400 });
   }
@@ -91,12 +91,12 @@ export async function POST(request: Request) {
 
   if (existing) {
     alreadyLinked = true;
-    const keepOwner = existing.role === 'owner';
+    const keepOwner = existing.role === 'admin';
     const { error } = await admin
       .from('memberships')
       .update({
         active: true,
-        role: keepOwner ? 'owner' : role,
+        role: keepOwner ? 'admin' : role,
       })
       .eq('id', existing.id);
     memberError = error;

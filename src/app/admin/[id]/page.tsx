@@ -11,11 +11,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 const ROLES = [
-  { key: 'owner', label: 'Dono(a) da empresa' },
+  { key: 'admin', label: 'Admin (dono da empresa)' },
   { key: 'admin', label: 'Administrador(a)' },
   { key: 'supervisor', label: 'Supervisor(a)' },
   { key: 'marketing', label: 'Marketing' },
-  { key: 'cleaner', label: 'Equipe de limpeza' },
+  { key: 'helper', label: 'Helper (equipe)' },
 ];
 
 export default async function AdminCompanyPage({ params }: { params: { id: string } }) {

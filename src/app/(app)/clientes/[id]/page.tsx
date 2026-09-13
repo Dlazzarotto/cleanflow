@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
   const { role: myRole, userId: myId } = await requireMarketingAccess();
-  const isOwner = myRole === 'owner';
+  const isOwner = myRole === 'admin';
   const isMkt = myRole === 'marketing';
   const supabase = createClient();
   const [{ data: client }, { data: bookings }, { data: incidents }] = await Promise.all([
