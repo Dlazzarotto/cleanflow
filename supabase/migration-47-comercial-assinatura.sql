@@ -71,6 +71,13 @@ select name, plan, commercial_enabled, commercial_price, monthly_fee
 -- =============================================================
 -- 8) As metricas da plataforma passam a mostrar o modulo
 -- =============================================================
+-- O Postgres nao deixa "create or replace" mudar o tipo de retorno de uma
+-- funcao que devolve table: as colunas do comercial sao novas em relacao a
+-- versao da migration-36, entao e preciso dropar antes. Sem este drop esta
+-- secao falha com "cannot change return type of existing function" e o
+-- painel /admin fica sem o selo de comercial, em silencio.
+drop function if exists public.platform_metrics();
+
 create or replace function public.platform_metrics()
 returns table (
   company_id uuid, company_name text, city text,

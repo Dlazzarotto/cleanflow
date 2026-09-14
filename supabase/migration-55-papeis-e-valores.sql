@@ -207,13 +207,64 @@ create policy "bookings_manager_all" on public.bookings
 -- -------------------------------------------------------------
 -- 5) Dinheiro deixa de ser "gestao" e passa a ser a chave
 -- -------------------------------------------------------------
+-- As quatro tabelas que guardam dinheiro:
+--   invoices        (amount)          migration-29
+--   invoice_items   (amount)          migration-30
+--   service_extras  (price)           migration-30
+--   booking_extras  (price)           migration-30
+--
+-- O QUE NAO SE TOCA AQUI: a politica booking_extras_insert. E por ela
+-- que a equipe registra um extra no meio do servico, e o preco nem sai
+-- do celular — quem define e a funcao request_extra() no servidor
+-- (migration-32). Mexer nela quebraria a regra 6: configuracao nunca
+-- impede a equipe de trabalhar. As views team_service_extras e
+-- team_booking_extras tambem seguem intactas: sao a visao sem preco.
+--
+-- Os "drop policy" repetem o nome novo tambem, para o arquivo poder ser
+-- reexecutado (create policy nao tem "or replace").
+
+-- Faturas
 drop policy if exists "invoices_manager_all" on public.invoices;
+drop policy if exists "invoices_values_all"  on public.invoices;
 create policy "invoices_values_all" on public.invoices
   for all using (company_id = public.current_company_id() and public.can_see_values())
   with check (company_id = public.current_company_id() and public.can_see_values());
 
-drop policy if exists "extras_manager_all" on public.extras;
-create policy "extras_values_all" on public.extras
+-- Itens da fatura
+drop policy if exists "invoice_items_manager"    on public.invoice_items;
+drop policy if exists "invoice_items_values_all" on public.invoice_items;
+create policy "invoice_items_values_all" on public.invoice_items
+  for all using (
+    invoice_id in (select id from public.invoices where company_id = public.current_company_id())
+    and public.can_see_values()
+  )
+  with check (
+    invoice_id in (select id from public.invoices where company_id = public.current_company_id())
+    and public.can_see_values()
+  );
+
+-- Catalogo de extras (tem preco)
+drop policy if exists "extras_read"             on public.service_extras;
+drop policy if exists "extras_manager_read"     on public.service_extras;
+drop policy if exists "extras_manage"           on public.service_extras;
+drop policy if exists "extras_values_read"      on public.service_extras;
+drop policy if exists "extras_values_manage"    on public.service_extras;
+create policy "extras_values_read" on public.service_extras
+  for select using (company_id = public.current_company_id() and public.can_see_values());
+create policy "extras_values_manage" on public.service_extras
+  for all using (company_id = public.current_company_id() and public.can_see_values())
+  with check (company_id = public.current_company_id() and public.can_see_values());
+
+-- Extras pedidos numa limpeza (tem preco). A politica de INSERT da
+-- equipe fica de fora de proposito — ver o bloco acima.
+drop policy if exists "booking_extras_select"         on public.booking_extras;
+drop policy if exists "booking_extras_manager_select" on public.booking_extras;
+drop policy if exists "booking_extras_manage"         on public.booking_extras;
+drop policy if exists "booking_extras_values_select"  on public.booking_extras;
+drop policy if exists "booking_extras_values_manage"  on public.booking_extras;
+create policy "booking_extras_values_select" on public.booking_extras
+  for select using (company_id = public.current_company_id() and public.can_see_values());
+create policy "booking_extras_values_manage" on public.booking_extras
   for all using (company_id = public.current_company_id() and public.can_see_values())
   with check (company_id = public.current_company_id() and public.can_see_values());
 

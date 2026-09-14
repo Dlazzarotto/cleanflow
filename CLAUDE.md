@@ -78,7 +78,10 @@ Dois campos diferentes, não confundir:
 - **Entrega completa, auditada e testada** — não patch parcial. "Ao mudar em um lugar, mudar em todos os equivalentes."
 - Quando questionado, **auditar e revisar o conceito/código**, nunca defender o que está feito.
 - **SQL sempre em arquivo `.sql` separado** em `supabase/`, numerado na sequência. Nunca colar SQL no chat.
-- Antes de encerrar: rodar `npm run build` localmente. Se passar, `git add . && git commit -m "..." && git push`.
+- **Antes de encerrar, auditar e testar — sempre.** `npm run build` valida TypeScript, **não valida SQL**. Mexeu em migration, rodar também:
+  - `npm run sql:auditar` — confere, sem banco, se toda tabela/view/função referenciada existe quando a migration roda. Existe porque a migration-55 foi entregue com `public.extras`, tabela que nunca existiu (os nomes reais são `service_extras` e `booking_extras`).
+  - `npm run sql:testar` — sobe um Postgres descartável, simula o que o Supabase fornece (`auth`, `storage`, `auth.uid()`) e aplica **todas** as migrations na ordem. Pega nome de coluna errado, sintaxe, ordem de dependência e tipo de retorno — coisas que a auditoria estática não vê. Pega também divergência entre `plans.ts` e `company_monthly_fee()`.
+  - Só depois: `git add . && git commit -m "..." && git push`.
 - Se precisar de decisão de negócio, perguntar antes de construir. Se for técnico, decidir e explicar em uma linha.
 
 ## Pendências abertas (ago/2026)
@@ -89,6 +92,11 @@ Dois campos diferentes, não confundir:
 - Lojas de app: D-U-N-S solicitado (aguardar); criar `david@cleanflows.app`; página da empresa no site + política de privacidade; Capacitor já configurado (`app.cleanflows.equipe`), app gratuito.
 - Logo final (ondas aqua + bolha laranja) aguardando arquivos.
 - Roadmap comercial: workloading fase 2 · checklist por turno com foto · suprimentos · rentabilidade por contrato · Stripe Connect.
+
+## Buracos conhecidos no histórico de SQL
+
+- **Faltam no repositório as migrations 1, 33, 34, 40, 41 e 42.** O banco de produção tem todas (foram rodadas no SQL Editor), mas os arquivos nunca foram commitados — então **não dá para reconstruir o banco do zero a partir daqui**. `supabase/teste-remendos.sql` recria só o que as migrations seguintes precisam (`memberships.last_seen_at`, `bookings.price`, `bookings.price_manual` e afins) para o teste conseguir rodar; **não é a migration perdida** e não deve ser aplicado em produção. Achando os originais, apagar o remendo.
+- **`migration-46` chama `public.client_messages`**, tabela que só vem no pacote `cleanflow-sms-mensagens-v9`, ainda não aplicado. O corpo de função em plpgsql não é validado na criação, então a migration passa — mas `juntar_clientes()` **quebra em execução** enquanto a v9 não rodar. A tela `/clientes/duplicados` depende disso.
 
 ## Verificação rápida de saúde do banco
 
