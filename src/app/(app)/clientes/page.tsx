@@ -31,7 +31,7 @@ export default async function ClientesPage({
   const rot = ROTULOS[modo];
   const supabase = createClient();
   const { data } = await supabase
-    .from('clients')
+    .from('clients_safe')
     .select('*')
     .eq('client_type', modo)
     .order('full_name');

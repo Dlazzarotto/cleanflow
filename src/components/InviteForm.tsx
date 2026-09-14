@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { ROLES, roleHint } from '@/lib/roles';
 import { useRouter } from 'next/navigation';
 
 interface TeamOption {
@@ -11,7 +12,7 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('cleaner');
+  const [role, setRole] = useState('helper');
   const [teamId, setTeamId] = useState('');
   const [password, setPassword] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
@@ -37,7 +38,7 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
           email,
           full_name: fullName,
           role,
-          team_id: role === 'cleaner' || role === 'supervisor' ? teamId || undefined : undefined,
+          team_id: role !== 'marketing' && role !== 'admin' ? teamId || undefined : undefined,
           password: password || undefined,
         }),
       });
@@ -79,11 +80,11 @@ export default function InviteForm({ teams }: { teams: TeamOption[] }) {
         <div>
           <label className="label" htmlFor="inv-role">Papel</label>
           <select className="input" id="inv-role" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="cleaner">Equipe de limpeza</option>
-            <option value="marketing">Equipe de marketing</option>
-            <option value="supervisor">Supervisor(a)</option>
-            <option value="admin">Administrador(a)</option>
+            {ROLES.map((r) => (
+              <option key={r.key} value={r.key}>{r.label}</option>
+            ))}
           </select>
+          <p className="mt-1 text-sm text-brand-700">{roleHint(role)}</p>
         </div>
         {role !== 'marketing' && role !== 'admin' ? (
           <div>

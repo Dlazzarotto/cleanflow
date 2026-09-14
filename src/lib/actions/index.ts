@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
 import { PERMISSION_KEYS } from '@/lib/permissions';
+import { isAdmin, valuesKeyApplies } from '@/lib/roles';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
@@ -31,7 +32,7 @@ export async function createClientAction(formData: FormData) {
     preferences: String(formData.get('preferences') ?? '') || null,
     products_notes: String(formData.get('products_notes') ?? '') || null,
     frequency: String(formData.get('frequency') ?? '') || null,
-    language: String(formData.get('language') ?? 'pt'),
+    language: String(formData.get('language') ?? 'en'),
     status: String(formData.get('status') ?? 'ativo'),
     source: String(formData.get('source') ?? '') || null,
     entry_source: formData.get('from_marketing') === 'on' ? 'marketing' : 'organico',
@@ -321,7 +322,7 @@ export async function updateClientAction(id: string, formData: FormData) {
       preferences: String(formData.get('preferences') ?? '') || null,
       products_notes: String(formData.get('products_notes') ?? '') || null,
       frequency: String(formData.get('frequency') ?? '') || null,
-      language: String(formData.get('language') ?? 'pt'),
+      language: String(formData.get('language') ?? 'en'),
       status: String(formData.get('status') ?? 'ativo'),
       source: String(formData.get('source') ?? '') || null,
       payment_method: String(formData.get('payment_method') ?? '') || null,
@@ -448,69 +449,73 @@ export async function updateMyBookingStatusAction(
 }
 
 
-// ---------- CARGOS ----------
-export async function createPositionAction(formData: FormData) {
-  const { supabase, companyId } = await getCompanyId();
-  const permissions: Record<string, boolean> = {};
-  for (const { key } of PERMISSION_KEYS) {
-    permissions[key] = formData.get(`perm_${key}`) === 'on';
-  }
-  const { error } = await supabase.from('positions').insert({
-    company_id: companyId,
-    name: String(formData.get('name') ?? '').trim(),
-    permissions,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath('/equipes');
-}
-
-export async function updatePositionAction(formData: FormData) {
-  const { supabase } = await getCompanyId();
-  const id = String(formData.get('id'));
-  const permissions: Record<string, boolean> = {};
-  for (const { key } of PERMISSION_KEYS) {
-    permissions[key] = formData.get(`perm_${key}`) === 'on';
-  }
-  const { data: linhasPositions14, error } = await supabase
-    .from('positions')
-    .update({
-      name: String(formData.get('name') ?? '').trim(),
-      permissions,
-    })
-    .eq('id', id)
-    .select('id');
-  if (error) throw new Error(error.message);
-  if (!linhasPositions14 || linhasPositions14.length === 0) {
-    throw new Error(
-      'Não foi possível salvar o cargo: apenas a gestão pode alterar.'
-    );
-  }
-  revalidatePath('/equipes');
-}
-
-export async function deletePositionAction(id: string) {
-  const { supabase } = await getCompanyId();
-  const { error } = await supabase.from('positions').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/equipes');
-}
-
-export async function setMemberPositionAction(formData: FormData) {
+/**
+ * Permissoes desta pessoa (migration-56).
+ * Nao existe mais cargo: o que ela enxerga esta no vinculo dela.
+ * Chave ausente vale como liberado, entao gravamos as cinco sempre —
+ * assim o que a gestora desmarcou fica registrado como bloqueado.
+ */
+export async function setMemberPermissionsAction(formData: FormData) {
   const { supabase } = await getCompanyId();
   const membershipId = String(formData.get('membership_id'));
-  const positionId = String(formData.get('position_id') ?? '');
-  const { data: linhasMemberships15, error } = await supabase
+
+  const permissions: Record<string, boolean> = {};
+  for (const { key } of PERMISSION_KEYS) {
+    permissions[key] = formData.get(`perm_${key}`) === 'on';
+  }
+
+  const { data: linhas, error } = await supabase
     .from('memberships')
-    .update({ position_id: positionId || null })
+    .update({ permissions })
     .eq('id', membershipId)
     .select('id');
   if (error) throw new Error(error.message);
-  if (!linhasMemberships15 || linhasMemberships15.length === 0) {
-    throw new Error(
-      'Não foi possível salvar o acesso: apenas a gestão pode alterar.'
-    );
+  if (!linhas?.length) {
+    throw new Error('Não foi possível salvar as permissões: apenas a gestão pode alterar.');
   }
   revalidatePath('/equipes');
+  revalidatePath('/minha-agenda');
+}
+
+export async function setMemberValuesAction(membershipId: string, liberar: boolean) {
+  const { supabase, role } = await getAuth();
+  if (!isAdmin(role)) {
+    throw new Error('Apenas o admin da empresa pode liberar valores.');
+  }
+  const { data: linhas, error } = await supabase
+    .from('memberships')
+    .update({ can_see_values: liberar })
+    .eq('id', membershipId)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!linhas?.length) {
+    throw new Error('Não foi possível mudar a liberação de valores.');
+  }
+  revalidatePath('/equipes');
+}
+
+export async function setMemberPermissionOverrideAction(formData: FormData) {
+  const { supabase } = await getCompanyId();
+  const membershipId = String(formData.get('membership_id'));
+
+  const override: Record<string, boolean> = {};
+  for (const { key } of PERMISSION_KEYS) {
+    const escolha = String(formData.get(`ovr_${key}`) ?? 'cargo');
+    if (escolha === 'sim') override[key] = true;
+    if (escolha === 'nao') override[key] = false;
+  }
+
+  const { data: linhas, error } = await supabase
+    .from('memberships')
+    .update({ permissions_override: override })
+    .eq('id', membershipId)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!linhas?.length) {
+    throw new Error('Não foi possível salvar a exceção: apenas a gestão pode alterar.');
+  }
+  revalidatePath('/equipes');
+  revalidatePath('/minha-agenda');
 }
 
 
@@ -534,7 +539,7 @@ export async function updateMyNameAction(formData: FormData) {
 
 export async function saveLocaleAction(formData: FormData) {
   const { supabase, userId, companyId } = await getAuth();
-  const locale = String(formData.get('locale') ?? 'pt');
+  const locale = String(formData.get('locale') ?? 'en');
   const { error } = await supabase.from('user_settings').upsert({
     user_id: userId,
     active_company_id: companyId,
@@ -546,7 +551,7 @@ export async function saveLocaleAction(formData: FormData) {
 
 export async function updateCompanyAction(formData: FormData) {
   const { supabase, companyId, role } = await getAuth();
-  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+  if (!['admin', 'manager', 'supervisor'].includes(role)) {
     throw new Error('Apenas a gestão pode editar os dados da empresa');
   }
   const { data: linhasCompanies17, error } = await supabase
@@ -598,7 +603,7 @@ export async function banClientAction(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const { supabase, userId, role } = await getAuth();
 
-  if (role !== 'owner') {
+  if (role !== 'admin') {
     return { ok: false, error: 'Apenas o dono da empresa pode banir um cliente.' };
   }
   const reason = input.reason.trim();
@@ -649,7 +654,7 @@ export async function banClientAction(input: {
 
 export async function unbanClientAction(id: string) {
   const { supabase, role } = await getAuth();
-  if (role !== 'owner') {
+  if (role !== 'admin') {
     throw new Error('Apenas o dono da empresa pode reverter um banimento.');
   }
   const { data: linhasClients19, error } = await supabase
@@ -723,7 +728,7 @@ export async function createLeadAction(formData: FormData) {
     lat: formData.get('lat') ? Number(formData.get('lat')) : null,
     lng: formData.get('lng') ? Number(formData.get('lng')) : null,
     preferences: String(formData.get('preferences') ?? '') || null,
-    language: String(formData.get('language') ?? 'pt'),
+    language: String(formData.get('language') ?? 'en'),
     source: String(formData.get('source') ?? '') || null,
     status: 'lead',
     entry_source: 'marketing',
@@ -765,7 +770,7 @@ export async function quickUpdateClientBillingAction(formData: FormData) {
 // ---------- MENSAGENS AUTOMATICAS ----------
 export async function saveReminderSettingsAction(formData: FormData) {
   const { supabase, companyId, role } = await getAuth();
-  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+  if (!['admin', 'manager', 'supervisor'].includes(role)) {
     throw new Error('Apenas a gestão altera as mensagens automáticas');
   }
 

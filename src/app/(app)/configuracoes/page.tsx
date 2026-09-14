@@ -4,7 +4,8 @@ import { updateMyNameAction, saveLocaleAction, updateCompanyAction } from '@/lib
 import PasswordForm from '@/components/PasswordForm';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Link from 'next/link';
-import { planName, maxTeams, monthlyFee } from '@/lib/plans';
+import { planName, maxTeams, monthlyFee, maxClients, maxUsers, hasReports, hasCommercial, limitLabel, feeCap, atFeeCap, EXTRA_TEAM_PRICE } from '@/lib/plans';
+import { DOC_LANGS } from '@/lib/i18n/documents';
 import EmailDiagnostic from '@/components/EmailDiagnostic';
 import ReminderPanel from '@/components/ReminderPanel';
 import SmsDiagnostic from '@/components/SmsDiagnostic';
@@ -12,13 +13,6 @@ import { saveReminderSettingsAction } from '@/lib/actions';
 import BackLink from '@/components/BackLink';
 
 export const dynamic = 'force-dynamic';
-
-const LOCALES = [
-  { code: 'pt', label: '🇧🇷 Português' },
-  { code: 'en', label: '🇺🇸 English' },
-  { code: 'es', label: '🇪🇸 Español' },
-  { code: 'fr', label: '🇫🇷 Français' },
-];
 
 export default async function ConfiguracoesPage() {
   const { supabase, userId, companyId, role, fullName } = await getAuth();
@@ -35,7 +29,7 @@ export default async function ConfiguracoesPage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const locale = (settings as any)?.locale ?? 'pt';
+  const locale = (settings as any)?.locale ?? 'en';
   const email = authUser?.user?.email ?? '';
 
   return (
@@ -71,7 +65,7 @@ export default async function ConfiguracoesPage() {
           <div className="grow">
             <label className="label" htmlFor="locale">Idioma</label>
             <select className="input" id="locale" name="locale" defaultValue={locale}>
-              {LOCALES.map((l) => (
+              {DOC_LANGS.map((l) => (
                 <option key={l.code} value={l.code}>{l.label}</option>
               ))}
             </select>
@@ -133,8 +127,24 @@ export default async function ConfiguracoesPage() {
           <h2 className="text-xl font-semibold text-brand-900">Assinatura CleanFlow</h2>
           <p className="text-brand-800">
             Plano <strong>{planName((company as any).plan)}</strong> ·{' '}
-            até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s) ·{' '}
             US$ {Number((company as any).monthly_fee ?? monthlyFee((company as any).plan, (company as any).extra_teams ?? 0)).toFixed(2)}/mês
+          </p>
+          <p className="text-brand-800">
+            {limitLabel(maxClients((company as any).plan), 'cliente ativo', 'clientes ativos')} ·{' '}
+            {limitLabel(maxUsers((company as any).plan), 'acesso', 'acessos')} ·{' '}
+            até {maxTeams((company as any).plan, (company as any).extra_teams ?? 0)} equipe(s)
+          </p>
+          <p className="text-brand-800">
+            {hasReports((company as any).plan) ? '✓' : '—'} Relatórios gerenciais ·{' '}
+            {hasCommercial((company as any).plan) ? '✓' : '—'} Limpeza comercial
+          </p>
+          <p className="text-brand-800">
+            Equipe adicional US$ {EXTRA_TEAM_PRICE}/mês ·{' '}
+            {feeCap((company as any).plan) === null
+              ? 'sem teto de mensalidade'
+              : atFeeCap((company as any).plan, (company as any).extra_teams ?? 0)
+                ? `você já está no teto de US$ ${feeCap((company as any).plan)}/mês — equipes a mais não aumentam a conta`
+                : `sua conta não passa de US$ ${feeCap((company as any).plan)}/mês`}
           </p>
           {(company as any).next_due_date && (
             <p className="text-brand-800">

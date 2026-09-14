@@ -32,7 +32,7 @@ export default async function DashboardComercial() {
     await Promise.all([
       supabase.rpc('dash_comercial'),
       supabase
-        .from('clients')
+        .from('clients_safe')
         .select('id, full_name, business_segment, billing_type, monthly_contract_value, default_price, frequency, area_sqft, payment_terms')
         .eq('client_type', 'comercial')
         .eq('status', 'ativo')

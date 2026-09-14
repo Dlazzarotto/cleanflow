@@ -55,9 +55,9 @@ export default async function NovoClientePage() {
         </div>
         <div>
           <label className="label" htmlFor="language">Idioma do cliente (documentos e email)</label>
-          <select className="input" id="language" name="language" defaultValue="pt">
-            <option value="pt">🇧🇷 Português</option>
+          <select className="input" id="language" name="language" defaultValue="en">
             <option value="en">🇺🇸 English</option>
+            <option value="pt">🇧🇷 Português</option>
             <option value="es">🇪🇸 Español</option>
             <option value="fr">🇫🇷 Français</option>
           </select>

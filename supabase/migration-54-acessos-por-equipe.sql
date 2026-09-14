@@ -1,0 +1,33 @@
+-- =============================================================
+-- CleanFlow AI - Migracao 54: ESVAZIADA — nao faz nada
+--
+-- Pode pular. O arquivo continua aqui so para nao abrir buraco na
+-- numeracao entre a 53 e a 55.
+--
+-- O que esta migration fazia foi todo substituido antes de ela chegar
+-- a rodar:
+--
+--   1) "Acesso = 1 da dona + 1 por equipe"
+--      Acesso passou a ser ILIMITADO em todos os planos — ver a
+--      migration-53. Um login a mais nao custa nada para a plataforma
+--      (diferente de SMS), e a empresa decide se usa uma conta por
+--      equipe ou uma por pessoa.
+--
+--   2) Cargos padrao (Motorista, Helper, Supervisor, Outro) em
+--      positions
+--      Virou papel de acesso na migration-55 (memberships.role), que e
+--      onde esses nomes moram agora. A tabela positions ficou legado.
+--
+--   3) memberships.permissions_override (excecao por pessoa sobre o
+--      cargo)
+--      A permissao deixou de ter cargo por tras: mora direto em
+--      memberships.permissions — ver a migration-56.
+--
+-- Se voce JA rodou uma versao anterior deste arquivo, nada precisa ser
+-- desfeito a mao: a 53 remove as travas de acesso que ela criava, e a
+-- 56 copia as permissoes e deixa positions/permissions_override como
+-- legado, com o SQL de remocao comentado no fim dela.
+-- =============================================================
+
+-- Sem comandos de proposito.
+select 'migration-54 nao faz nada — ver 53, 55 e 56' as aviso;
