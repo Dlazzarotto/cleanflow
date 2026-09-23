@@ -23,6 +23,10 @@ interface Row {
   price: number;
   checkin_at: string | null;
   checkout_at: string | null;
+  // true = o escritorio fechou a limpeza (migration-57). A hora de saida
+  // foi arbitrada no fim previsto, ninguem cronometrou — nao serve para
+  // medir duracao real nem trajeto.
+  checkout_by_office: boolean | null;
   clients: { lat: number | null; lng: number | null } | null;
   teams: { name: string; color: string } | null;
 }
@@ -113,7 +117,7 @@ export default async function RelatoriosPage({
 
   const { data } = await supabase
     .from('bookings')
-    .select('id, team_id, scheduled_at, duration_minutes, price, checkin_at, checkout_at, clients(lat, lng), teams(name, color)')
+    .select('id, team_id, scheduled_at, duration_minutes, price, checkin_at, checkout_at, checkout_by_office, clients(lat, lng), teams(name, color)')
     .eq('status', 'concluido')
     .gte('scheduled_at', since.toISOString())
     .order('checkin_at');
@@ -142,7 +146,10 @@ export default async function RelatoriosPage({
       s.cleanings += 1;
       s.houseMinutes += realMin;
       s.revenue += Number(r.price);
-      if (r.duration_minutes > 0) {
+      // Limpeza fechada pelo escritorio entra na contagem e na receita
+      // (o servico aconteceu), mas fica fora do desvio: comparar o tempo
+      // previsto com ele mesmo daria sempre 0% e mascararia o desvio real.
+      if (r.duration_minutes > 0 && !r.checkout_by_office) {
         s.deviationPctSum += ((realMin - r.duration_minutes) / r.duration_minutes) * 100;
         s.deviationCount += 1;
       }
@@ -154,6 +161,8 @@ export default async function RelatoriosPage({
   const byTeamDay = new Map<string, Row[]>();
   for (const r of done) {
     if (!r.team_id) continue;
+    // Hora de saida arbitrada nao serve de referencia para o trajeto seguinte.
+    if (r.checkout_by_office) continue;
     const key = `${r.team_id}|${localDay(r.checkin_at!)}`;
     const arr = byTeamDay.get(key) ?? [];
     arr.push(r);

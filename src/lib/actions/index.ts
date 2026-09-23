@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getAuth } from '@/lib/auth';
 import { PERMISSION_KEYS } from '@/lib/permissions';
-import { isAdmin, valuesKeyApplies } from '@/lib/roles';
+import { isAdmin, isManager, valuesKeyApplies } from '@/lib/roles';
 import { etToUtcIso, addDaysYmd } from '@/lib/tz';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 
@@ -135,6 +135,70 @@ export async function updateBookingStatusAction(id: string, status: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/agendamentos');
   revalidatePath('/dashboard');
+}
+
+/**
+ * Fecha uma limpeza que a equipe deixou aberta — o botao do painel
+ * "Limpezas sem check-out" no dashboard.
+ *
+ * NAO e um check-out normal: ninguem estava na casa marcando a hora.
+ * Por isso duas coisas sao diferentes de updateBookingStatusAction:
+ *
+ *  1. checkout_at recebe o FIM PREVISTO (scheduled_at + duration),
+ *     nao o now(). Carimbar agora faria a limpeza de 14/08 constar
+ *     com 40 dias de duracao — e o relatorio, que descarta qualquer
+ *     coisa acima de 12h, sumiria com ela e com a receita dela.
+ *  2. checkout_by_office marca a linha, para o relatorio nao medir
+ *     duracao nem trajeto em cima de uma hora que foi arbitrada.
+ *
+ * A fatura nasce sozinha pelo trigger da migration-44, com vencimento
+ * contado da data da limpeza — entao uma limpeza velha ja entra vencida,
+ * que e a verdade.
+ */
+export async function fecharCheckoutEsquecidoAction(id: string) {
+  const { supabase, userId, role } = await getAuth();
+  if (!isManager(role)) throw new Error('Sem permissao para fechar limpeza.');
+
+  const { data: b, error: readError } = await supabase
+    .from('bookings')
+    .select('id, status, scheduled_at, duration_minutes, checkin_at')
+    .eq('id', id)
+    .single();
+  if (readError || !b) throw new Error('Limpeza nao encontrada.');
+  if (b.status !== 'em_andamento') {
+    throw new Error('Esta limpeza nao esta em andamento — recarregue a pagina.');
+  }
+
+  const inicio = new Date(b.scheduled_at).getTime();
+  const fimPrevisto = new Date(inicio + (b.duration_minutes ?? 120) * 60000);
+  // Limpeza que ainda nao chegou no fim previsto: fecha na hora atual mesmo,
+  // senao o check-out ficaria no futuro.
+  const checkout = fimPrevisto.getTime() > Date.now() ? new Date() : fimPrevisto;
+
+  const patch: Record<string, unknown> = {
+    status: 'concluido',
+    checkout_at: checkout.toISOString(),
+    checkout_by_office: true,
+    checkout_closed_by: userId,
+  };
+  // Sem check-in o relatorio descarta a linha inteira. Se a equipe nem
+  // abriu, o inicio conhecido e a hora agendada.
+  if (!b.checkin_at) patch.checkin_at = new Date(inicio).toISOString();
+
+  const { data: updated, error } = await supabase
+    .from('bookings')
+    .update(patch)
+    .eq('id', id)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if (!updated || updated.length === 0) {
+    throw new Error('Nao foi possivel fechar a limpeza. Confira sua permissao.');
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/agendamentos');
+  revalidatePath('/faturas');
+  revalidatePath('/calendario');
 }
 
 /**
