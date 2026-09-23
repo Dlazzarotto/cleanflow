@@ -78,7 +78,7 @@ export async function saveEstimateAction(payload: {
     lat: payload.lat,
     lng: payload.lng,
     frequency: payload.frequency,
-    language: payload.language ?? 'pt',
+    language: payload.language ?? 'en',
     first_price: payload.first_price ?? null,
     first_minutes: payload.first_minutes ?? null,
     recurring_price: payload.recurring_price ?? null,
@@ -185,7 +185,7 @@ export async function convertEstimateToClientAction(id: string) {
       lat: e.lat,
       lng: e.lng,
       frequency: e.frequency || null,
-      language: e.language || 'pt',
+      language: e.language || 'en',
       status: 'em_espera',
     })
     .select('id')
@@ -241,7 +241,7 @@ export async function updateEstimateAction(
       lat: payload.lat,
       lng: payload.lng,
       frequency: payload.frequency,
-      language: payload.language ?? 'pt',
+      language: payload.language ?? 'en',
       first_price: payload.first_price ?? null,
       first_minutes: payload.first_minutes ?? null,
       recurring_price: payload.recurring_price ?? null,

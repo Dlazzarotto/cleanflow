@@ -14,7 +14,7 @@ export default async function EditarClientePage({ params }: { params: { id: stri
   const { role: myRole, userId: myId } = await requireMarketingAccess();
   const supabase = createClient();
   const { data: temComercial } = await supabase.rpc('has_commercial');
-  const { data } = await supabase.from('clients').select('*').eq('id', params.id).single();
+  const { data } = await supabase.from('clients_safe').select('*').eq('id', params.id).single();
   if (!data) notFound();
   if (myRole === 'marketing' && (data as any).created_by !== myId) redirect('/marketing');
   const c = data as Client;
@@ -72,9 +72,9 @@ export default async function EditarClientePage({ params }: { params: { id: stri
         </div>
         <div>
           <label className="label" htmlFor="language">Idioma do cliente (documentos e email)</label>
-          <select className="input" id="language" name="language" defaultValue={(c as any).language ?? 'pt'}>
-            <option value="pt">🇧🇷 Português</option>
+          <select className="input" id="language" name="language" defaultValue={(c as any).language ?? 'en'}>
             <option value="en">🇺🇸 English</option>
+            <option value="pt">🇧🇷 Português</option>
             <option value="es">🇪🇸 Español</option>
             <option value="fr">🇫🇷 Français</option>
           </select>

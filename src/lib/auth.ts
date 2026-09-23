@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
+import { isAdmin, isManager, isMarketing, isField, roleKey, roleLabel, type Role } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 
 export interface AuthContext {
   supabase: ReturnType<typeof createClient>;
   userId: string;
   companyId: string;
-  role: 'owner' | 'admin' | 'supervisor' | 'cleaner' | 'marketing';
+  role: Role;
   fullName: string;
 }
 
@@ -33,18 +34,14 @@ export async function getAuth(): Promise<AuthContext> {
     supabase,
     userId: user.id,
     companyId: companyId as string,
-    role: (membership?.role ?? 'cleaner') as AuthContext['role'],
+    role: roleKey(membership?.role),
     fullName: membership?.full_name ?? '',
   };
 }
 
-export function isManager(role: string) {
-  return role === 'owner' || role === 'admin' || role === 'supervisor';
-}
-
-export function isMarketing(role: string) {
-  return role === 'marketing';
-}
+// Papeis vivem em um lugar so: src/lib/roles.ts. Reexportado aqui porque
+// meia tela do app ja importa isManager/isMarketing de '@/lib/auth'.
+export { isAdmin, isManager, isMarketing, isField, roleKey, roleLabel };
 
 /** Telas do funil comercial: gestão + time de marketing. */
 export async function requireMarketingAccess(): Promise<AuthContext> {

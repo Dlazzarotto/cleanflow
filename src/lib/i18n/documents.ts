@@ -6,8 +6,8 @@
 export type DocLang = 'pt' | 'en' | 'es' | 'fr';
 
 export const DOC_LANGS: { code: DocLang; label: string }[] = [
-  { code: 'pt', label: '🇧🇷 Português' },
   { code: 'en', label: '🇺🇸 English' },
+  { code: 'pt', label: '🇧🇷 Português' },
   { code: 'es', label: '🇪🇸 Español' },
   { code: 'fr', label: '🇫🇷 Français' },
 ];
@@ -315,5 +315,5 @@ export const EMAIL_I18N: Record<DocLang, {
 };
 
 export function normalizeLang(l: string | null | undefined): DocLang {
-  return (['pt', 'en', 'es', 'fr'] as const).includes(l as DocLang) ? (l as DocLang) : 'pt';
+  return (['pt', 'en', 'es', 'fr'] as const).includes(l as DocLang) ? (l as DocLang) : 'en';
 }

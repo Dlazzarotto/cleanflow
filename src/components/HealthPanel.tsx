@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { fecharCheckoutEsquecidoAction } from '@/lib/actions';
 
 const GRAVIDADE: Record<string, string> = {
   alta: 'bg-red-50 text-red-800',
@@ -20,6 +21,15 @@ const DESTINO: Record<string, string> = {
   cobranca: '/regularizacao',
 };
 
+/** Fim previsto de uma limpeza, só para explicar o botão em texto. */
+const fmtHora = (inicio: string, minutos: number | null) =>
+  new Date(new Date(inicio).getTime() + (minutos ?? 120) * 60000).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
 /**
  * Mostra problemas de configuração ANTES de a equipe travar em campo.
  */
@@ -29,7 +39,7 @@ export default async function HealthPanel() {
     supabase.rpc('operation_health'),
     supabase
       .from('bookings')
-      .select('id, scheduled_at, duration_minutes, clients(full_name), teams(name)')
+      .select('id, client_id, scheduled_at, duration_minutes, clients(full_name), teams(name)')
       .eq('status', 'em_andamento')
       .order('scheduled_at'),
   ]);
@@ -60,22 +70,41 @@ export default async function HealthPanel() {
         </p>
         <div className="space-y-2">
           {esquecidas.map((b: any) => (
-            <div key={b.id} className="rounded-card bg-sun/15 p-3">
-              <span className="font-medium text-brand-900">
-                {b.clients?.full_name ?? 'Limpeza'}
-              </span>
-              <span className="block text-sm text-brand-800">
-                {b.teams?.name ? `${b.teams.name} · ` : ''}
-                começou {new Date(b.scheduled_at).toLocaleString('pt-BR', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
+              <div
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-sun/15 p-3"
+              >
+                <Link
+                  href={`/clientes/${b.client_id}`}
+                  className="min-w-0 flex-1 hover:opacity-80"
+                >
+                  <span className="font-medium text-brand-900">
+                    {b.clients?.full_name ?? 'Limpeza'}
+                  </span>
+                  <span className="block text-sm text-brand-800">
+                    {b.teams?.name ? `${b.teams.name} · ` : ''}
+                    começou {new Date(b.scheduled_at).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </Link>
+                <form action={fecharCheckoutEsquecidoAction.bind(null, b.id)}>
+                  <button className="btn-primary min-h-touch whitespace-nowrap" type="submit">
+                    ✅ Fechar check-out
+                  </button>
+                </form>
+              </div>
           ))}
         </div>
+        <p className="mt-3 text-sm text-brand-800">
+          Fechar aqui encerra a limpeza no fim previsto (
+          {fmtHora(esquecidas[0].scheduled_at, esquecidas[0].duration_minutes)} na primeira da lista),
+          não na hora de agora — senão uma limpeza de agosto constaria com semanas de duração. A
+          fatura nasce em seguida, vencendo a partir da data da limpeza.
+        </p>
       </div>
     )}
 

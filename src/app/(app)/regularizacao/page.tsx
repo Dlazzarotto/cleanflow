@@ -19,7 +19,7 @@ export default async function RegularizacaoPage() {
   const supabase = createClient();
 
   const { data } = await supabase
-    .from('clients')
+    .from('clients_safe')
     .select('*')
     .eq('status', 'ativo')
     .order('full_name');

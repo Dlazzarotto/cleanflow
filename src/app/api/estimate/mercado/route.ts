@@ -83,7 +83,7 @@ Responda SOMENTE com um objeto JSON válido, sem markdown e sem texto antes ou d
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],

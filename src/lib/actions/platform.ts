@@ -2,14 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { requirePlatformAdmin } from '@/lib/platform';
-import { monthlyFee } from '@/lib/plans';
+import { monthlyFee, planKey } from '@/lib/plans';
 
 /** Atualiza os dados comerciais/administrativos de uma empresa assinante. */
 export async function updateCompanyAccountAction(formData: FormData) {
   const { supabase } = await requirePlatformAdmin();
   const id = String(formData.get('id'));
+  const planoEscolhido = planKey(String(formData.get('plan') ?? ''));
+  const equipesExtras = Math.max(0, Number(formData.get('extra_teams') ?? 0));
 
-  const { error } = await supabase
+  const { data: alterado, error } = await supabase
     .from('companies')
     .update({
       name: String(formData.get('name') ?? '').trim(),
@@ -17,18 +19,13 @@ export async function updateCompanyAccountAction(formData: FormData) {
       phone: String(formData.get('phone') ?? '') || null,
       email: String(formData.get('email') ?? '') || null,
       website: String(formData.get('website') ?? '') || null,
-      plan: String(formData.get('plan') ?? 'standard'),
-      extra_teams: Number(formData.get('extra_teams') ?? 0),
+      plan: planoEscolhido,
+      extra_teams: equipesExtras,
+      // O comercial faz parte do Plus — nao e mais somado a mensalidade.
       monthly_fee:
         Number(formData.get('monthly_fee') ?? 0) > 0
           ? Number(formData.get('monthly_fee'))
-          : monthlyFee(
-              String(formData.get('plan') ?? 'standard'),
-              Number(formData.get('extra_teams') ?? 0)
-            ) +
-            (formData.get('commercial_enabled') === 'on'
-              ? Number(formData.get('commercial_price') ?? 20)
-              : 0),
+          : monthlyFee(planoEscolhido, equipesExtras),
       account_status: String(formData.get('account_status') ?? 'ativa'),
       billing_status: String(formData.get('billing_status') ?? 'em_dia'),
       next_due_date: String(formData.get('next_due_date') ?? '') || null,
@@ -39,8 +36,12 @@ export async function updateCompanyAccountAction(formData: FormData) {
         : {}),
       platform_notes: String(formData.get('platform_notes') ?? '') || null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!alterado?.length) {
+    throw new Error('Nada foi alterado: a empresa não foi encontrada ou o acesso foi recusado.');
+  }
 
   revalidatePath('/admin');
   revalidatePath(`/admin/${id}`);
@@ -49,11 +50,15 @@ export async function updateCompanyAccountAction(formData: FormData) {
 /** Suspende ou reativa o acesso de uma empresa (inadimplencia, cancelamento). */
 export async function setAccountStatusAction(id: string, status: string) {
   const { supabase } = await requirePlatformAdmin();
-  const { error } = await supabase
+  const { data: alterado, error } = await supabase
     .from('companies')
     .update({ account_status: status })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!alterado?.length) {
+    throw new Error('Nada foi alterado: a empresa não foi encontrada ou o acesso foi recusado.');
+  }
   revalidatePath('/admin');
   revalidatePath(`/admin/${id}`);
 }

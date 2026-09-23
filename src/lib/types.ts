@@ -1,4 +1,6 @@
-export type Role = 'owner' | 'admin' | 'supervisor' | 'cleaner';
+// Papel vive em src/lib/roles.ts — uma lista so.
+import type { Role } from '@/lib/roles';
+export type { Role };
 
 export type BookingStatus =
   | 'orcamento'
