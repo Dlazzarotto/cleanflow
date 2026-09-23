@@ -42,8 +42,11 @@ create table if not exists auth.users (
   email text,
   last_sign_in_at timestamptz
 );
-create or replace function auth.uid() returns uuid
-  language sql stable as $$ select null::uuid $$;
+-- No Supabase auth.uid() vem do JWT da requisicao. Aqui le a mesma
+-- configuracao de sessao que o PostgREST preenche, para dar para
+-- "virar" um usuario no teste com: set request.jwt.claim.sub = '<uuid>'
+create or replace function auth.uid() returns uuid language sql stable as
+  $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
 -- Supabase Storage: buckets e objects
 create schema if not exists storage;
@@ -68,6 +71,20 @@ create or replace function storage.foldername(name text) returns text[]
 do $$ begin create role anon; exception when duplicate_object then null; end $$;
 do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
 do $$ begin create role service_role; exception when duplicate_object then null; end $$;
+
+-- O Supabase concede isto por padrao. Sem os grants, qualquer teste com
+-- "set role authenticated" morre em "permission denied for table X" antes
+-- de a RLS sequer ser avaliada — o teste passava a mentir que estava tudo
+-- bem porque nunca chegava a exercitar a politica.
+grant usage on schema public to anon, authenticated, service_role;
+grant usage on schema auth   to anon, authenticated, service_role;
+grant select on auth.users   to authenticated, service_role;
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on functions to anon, authenticated, service_role;
 SQL
 
 echo "── Ambiente Supabase simulado. Aplicando SQL na ordem:"
@@ -122,6 +139,14 @@ select pg_get_constraintdef(oid) from pg_constraint where conname = 'memberships
 SQL
 
   psql -q -d "$DB" <<'SQL'
+-- Tabelas criadas pelas migrations nao pegam o default privilege acima
+-- (ele so vale para o que for criado depois). Alcanca o que ja existe.
+grant all on all tables    in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;
+SQL
+
+  psql -q -d "$DB" <<'SQL'
 insert into public.companies (name, slug, plan, extra_teams)
 select 'Teste ' || p || ' ' || e, 'teste-' || p || '-' || e, p, e
   from (values ('base'),('pro'),('plus')) t(p)
@@ -137,6 +162,99 @@ select c.plan,
  where c.slug like 'teste-%'
  order by c.plan, c.extra_teams;
 SQL
+
+  # ---- RLS: o que a gestora pode e a equipe nao pode ----
+  # Esta parte existe porque tudo neste projeto se apoia na RLS ("as travas
+  # rodam no banco, nao na tela"). Sem ela o teste so conferia sintaxe.
+  echo
+  echo "── RLS com usuario de verdade:"
+  psql -q -d "$DB" <<'SQL'
+set client_min_messages = warning;
+
+insert into auth.users (id, email) values
+ ('10000000-0000-0000-0000-000000000001','gestora@teste.com'),
+ ('10000000-0000-0000-0000-000000000002','equipe@teste.com');
+
+insert into public.companies (id, name, slug, plan)
+ values ('20000000-0000-0000-0000-000000000001','RLS Teste','rls-teste','pro');
+
+insert into public.memberships (user_id, company_id, role, full_name, active) values
+ ('10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','admin','Gestora',true),
+ ('10000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','helper','Equipe',true);
+
+insert into public.user_settings (user_id, active_company_id) values
+ ('10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001'),
+ ('10000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001')
+on conflict (user_id) do update set active_company_id = excluded.active_company_id;
+
+alter table public.clients disable trigger clients_guard_price;
+insert into public.clients (id, company_id, full_name, default_price, client_type)
+ values ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Cliente RLS',265,'residencial');
+alter table public.clients enable trigger clients_guard_price;
+
+insert into public.bookings (id, company_id, client_id, scheduled_at, duration_minutes, price, status, checkin_at)
+ values ('40000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',
+         '30000000-0000-0000-0000-000000000001', now() - interval '30 days', 120, 265,
+         'em_andamento', now() - interval '30 days');
+SQL
+
+  psql -q -d "$DB" <<'SQL'
+with gestora as (
+  select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false)
+)
+select 'gestora' as quem,
+       public.is_manager()     as gerencia,
+       public.can_see_values() as ve_valores
+  from gestora;
+SQL
+
+  psql -q -d "$DB" <<'SQL'
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000002';
+set role authenticated;
+select 'equipe' as quem,
+       public.is_manager()     as gerencia,
+       public.is_field()       as e_de_campo,
+       public.can_see_values() as ve_valores;
+SQL
+
+  echo "  (esperado: gestora gerencia=t ve_valores=t · equipe gerencia=f e_de_campo=t ve_valores=f)"
+
+  echo
+  echo "  A equipe consegue fechar uma limpeza? (tem que vir 0 linhas)"
+  psql -q -d "$DB" <<'SQL'
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000002';
+set role authenticated;
+update public.bookings set status = 'concluido'
+ where id = '40000000-0000-0000-0000-000000000001'
+ returning id;
+SQL
+
+  echo
+  echo "  A equipe ve o preco do cliente? (default_price tem que vir vazio ou 0 linhas)"
+  psql -q -d "$DB" <<'SQL'
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000002';
+set role authenticated;
+select full_name, default_price from public.clients_safe
+ where id = '30000000-0000-0000-0000-000000000001';
+SQL
+
+  echo
+  echo "  A gestora consegue fechar? (tem que vir 1 linha, com a fatura em seguida)"
+  psql -q -d "$DB" <<'SQL'
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+set role authenticated;
+update public.bookings
+   set status = 'concluido',
+       checkout_at = scheduled_at + (duration_minutes || ' minutes')::interval,
+       checkout_by_office = true,
+       checkout_closed_by = '10000000-0000-0000-0000-000000000001'
+ where id = '40000000-0000-0000-0000-000000000001'
+ returning id, checkout_by_office;
+
+select number, amount, due_at from public.invoices
+ where booking_id = '40000000-0000-0000-0000-000000000001';
+SQL
+
 else
   echo "── Parou no primeiro erro. Corrija e rode de novo."
   exit 1

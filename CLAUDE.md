@@ -80,7 +80,8 @@ Dois campos diferentes, não confundir:
 - **SQL sempre em arquivo `.sql` separado** em `supabase/`, numerado na sequência. Nunca colar SQL no chat.
 - **Antes de encerrar, auditar e testar — sempre.** `npm run build` valida TypeScript, **não valida SQL**. Mexeu em migration, rodar também:
   - `npm run sql:auditar` — confere, sem banco, se toda tabela/view/função referenciada existe quando a migration roda. Existe porque a migration-55 foi entregue com `public.extras`, tabela que nunca existiu (os nomes reais são `service_extras` e `booking_extras`).
-  - `npm run sql:testar` — sobe um Postgres descartável, simula o que o Supabase fornece (`auth`, `storage`, `auth.uid()`) e aplica **todas** as migrations na ordem. Pega nome de coluna errado, sintaxe, ordem de dependência e tipo de retorno — coisas que a auditoria estática não vê. Pega também divergência entre `plans.ts` e `company_monthly_fee()`.
+  - `npm run sql:testar` — sobe um Postgres descartável, simula o que o Supabase fornece (`auth`, `storage`, `auth.uid()`, os `grant` de `anon`/`authenticated`/`service_role`) e aplica **todas** as migrations na ordem. Pega nome de coluna errado, sintaxe, ordem de dependência e tipo de retorno — coisas que a auditoria estática não vê. Pega também divergência entre `plans.ts` e `company_monthly_fee()`.
+    **Testa RLS de verdade**: `auth.uid()` lê `request.jwt.claim.sub`, então dá para virar um usuário com `set request.jwt.claim.sub = '<uuid>'; set role authenticated;`. O script já confere o essencial — gestora fecha limpeza e vê valores, equipe não fecha e não vê preço. Mexeu em política ou em `can_see_values()`/`is_manager()`/`sees_team()`, essa seção é quem avisa.
   - Só depois: `git add . && git commit -m "..." && git push`.
 - Se precisar de decisão de negócio, perguntar antes de construir. Se for técnico, decidir e explicar em uma linha.
 
